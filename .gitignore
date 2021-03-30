@@ -1,0 +1,4 @@
+#Ignores files for system service
+
+.vscode/settings.json
+.DS_Store

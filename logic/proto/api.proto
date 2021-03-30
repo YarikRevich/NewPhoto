@@ -1,0 +1,192 @@
+syntax="proto3";
+
+package main;
+
+option go_package = "logic/proto";
+
+
+service Authentication {
+    //Service for user authentication before using main service ...
+
+    rpc RegisterUser(UserRegisterRequest) returns (UserRegisterResponse);
+    rpc LoginUser(UserLoginRequest) returns (UserLoginResponse);
+
+} 
+
+message UserRegisterRequest{
+    string login = 1;
+    string password = 2;
+    string firstname = 3;
+    string secondname = 4;
+}
+
+message UserRegisterResponse{
+    string error = 1;
+}
+
+message UserLoginRequest{
+    string login = 1;
+    string password = 2;
+}
+
+message UserLoginResponse{
+    string userid = 1;
+    string error = 2;
+}
+
+service NewPhotos {
+    // Returns all the photos of the passed user ...
+    rpc  AllPhotos(AllPhotosRequest) returns (stream AllPhotosResponse) {};
+
+    // Uploads equal photo of the passed user ...
+    rpc  UploadEqualPhoto(UploadEqualPhotoRequest) returns (UploadEqualPhotoResponse);
+    
+    // Returns current available storage for storing of the passed user ...
+    rpc  GetUserinfo(GetUserinfoRequest) returns (GetUserinfoResponse);
+
+    rpc  GetFullPhotoByThumbnail(GetFullPhotoByThumbnailRequest) returns (GetFullPhotoByThumbnailResponse);
+
+    rpc  AllPhotosAlbum(AllPhotosAlbumRequest) returns (stream AllPhotosAlbumResponse);
+
+    rpc  GetAllAlbums(GetAllAlbumsRequest) returns (stream GetAllAlbumsResponse);
+
+    rpc  CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse);
+
+    rpc  DeleteAlbum(DeleteAlbumRequest) returns (DeleteAlbumResponse);
+
+    rpc  UploadPhotoToAlbum(stream UploadPhotoToAlbumRequest) returns (UploadPhotoToAlbumResponse);
+}
+
+message AllPhotosRequest {
+    string userid = 1;
+}
+
+message AllPhotosResponse {
+    bytes photo = 1; 
+    bytes thumbnail = 2;
+    string extension = 3;
+    double size = 4;
+    string tags = 5;
+    string error = 6;
+}
+
+message UploadEqualPhotoRequest {
+    string userid = 1;
+    bytes photo = 2;
+    bytes thumbnail = 3;
+    string extension = 4;
+    double size = 5;
+}
+
+message UploadEqualPhotoResponse {
+    string error = 1;
+}
+
+message EqualPhotoRequest{
+    string userid = 1;
+    string name = 2;
+}
+
+message EqualPhotoResponse {
+    bytes photo = 1;
+    bytes thumbnail = 2;
+    string error = 3;
+}
+
+message GetUserinfoRequest {
+    string userid = 1;
+}
+
+message GetUserinfoResponse {
+    double storage = 1;
+    string firstname = 2;
+    string secondname = 3;
+    string error = 4;
+}
+
+message GetFullPhotoByThumbnailRequest {
+    string userid = 1;
+    bytes thumbnail = 2;
+}
+
+message GetFullPhotoByThumbnailResponse {
+    bytes photo = 1;
+    string error = 2;
+}
+
+message AllPhotosAlbumRequest{
+    string userid = 1;
+    string name = 2; 
+}
+
+message AllPhotosAlbumResponse{
+    bytes photo = 1; 
+    bytes thumbnail = 2;
+    string extension = 3;
+    double size = 4;
+    string error = 5;
+    string album = 6;
+}
+
+message GetAllAlbumsRequest{
+    string userid = 1;
+}
+
+message GetAllAlbumsResponse{
+    string name = 1;
+    bytes latest_photo = 2;
+    bytes latest_photo_thumbnail = 3;
+    string error = 4;
+}
+
+message CreateAlbumRequest {
+    string userid = 1;
+    string name = 2;
+}
+
+message CreateAlbumResponse {
+    string error = 1;
+}
+
+message DeleteAlbumRequest{
+    string userid = 1;
+    string name = 2;
+}
+
+message DeleteAlbumResponse{
+    string error = 1;
+}
+
+message UploadPhotoToAlbumRequest{
+    string userid = 1;
+    bytes photo = 2;
+    bytes thumbnail = 3;
+    string extension = 4;
+    double size = 5;
+    string album = 6;
+}
+
+message UploadPhotoToAlbumResponse{
+    string error = 1;
+}
+
+service Tag{
+    rpc IsHuman(IsHumanRequest) returns (IsHumanResponse){};
+    rpc IsDog(IsDogRequest) returns (IsDogResponse){};
+}
+
+message IsHumanRequest{
+    bytes photo = 1; 
+}
+
+message IsHumanResponse{
+    bool ok = 1;
+}
+
+message IsDogRequest{
+    bytes photo = 1;
+}
+
+message IsDogResponse{
+    bool ok = 1;
+}
