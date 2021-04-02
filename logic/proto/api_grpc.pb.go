@@ -629,8 +629,7 @@ var _NewPhotos_serviceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TagClient interface {
-	IsHuman(ctx context.Context, in *IsHumanRequest, opts ...grpc.CallOption) (*IsHumanResponse, error)
-	IsDog(ctx context.Context, in *IsDogRequest, opts ...grpc.CallOption) (*IsDogResponse, error)
+	RecognizeObject(ctx context.Context, in *RecognizeObjectRequest, opts ...grpc.CallOption) (*RecognizeObjectResponse, error)
 }
 
 type tagClient struct {
@@ -641,18 +640,9 @@ func NewTagClient(cc grpc.ClientConnInterface) TagClient {
 	return &tagClient{cc}
 }
 
-func (c *tagClient) IsHuman(ctx context.Context, in *IsHumanRequest, opts ...grpc.CallOption) (*IsHumanResponse, error) {
-	out := new(IsHumanResponse)
-	err := c.cc.Invoke(ctx, "/main.Tag/IsHuman", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *tagClient) IsDog(ctx context.Context, in *IsDogRequest, opts ...grpc.CallOption) (*IsDogResponse, error) {
-	out := new(IsDogResponse)
-	err := c.cc.Invoke(ctx, "/main.Tag/IsDog", in, out, opts...)
+func (c *tagClient) RecognizeObject(ctx context.Context, in *RecognizeObjectRequest, opts ...grpc.CallOption) (*RecognizeObjectResponse, error) {
+	out := new(RecognizeObjectResponse)
+	err := c.cc.Invoke(ctx, "/main.Tag/RecognizeObject", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -663,8 +653,7 @@ func (c *tagClient) IsDog(ctx context.Context, in *IsDogRequest, opts ...grpc.Ca
 // All implementations must embed UnimplementedTagServer
 // for forward compatibility
 type TagServer interface {
-	IsHuman(context.Context, *IsHumanRequest) (*IsHumanResponse, error)
-	IsDog(context.Context, *IsDogRequest) (*IsDogResponse, error)
+	RecognizeObject(context.Context, *RecognizeObjectRequest) (*RecognizeObjectResponse, error)
 	mustEmbedUnimplementedTagServer()
 }
 
@@ -672,11 +661,8 @@ type TagServer interface {
 type UnimplementedTagServer struct {
 }
 
-func (UnimplementedTagServer) IsHuman(context.Context, *IsHumanRequest) (*IsHumanResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsHuman not implemented")
-}
-func (UnimplementedTagServer) IsDog(context.Context, *IsDogRequest) (*IsDogResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method IsDog not implemented")
+func (UnimplementedTagServer) RecognizeObject(context.Context, *RecognizeObjectRequest) (*RecognizeObjectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecognizeObject not implemented")
 }
 func (UnimplementedTagServer) mustEmbedUnimplementedTagServer() {}
 
@@ -691,38 +677,20 @@ func RegisterTagServer(s grpc.ServiceRegistrar, srv TagServer) {
 	s.RegisterService(&_Tag_serviceDesc, srv)
 }
 
-func _Tag_IsHuman_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IsHumanRequest)
+func _Tag_RecognizeObject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecognizeObjectRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TagServer).IsHuman(ctx, in)
+		return srv.(TagServer).RecognizeObject(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/main.Tag/IsHuman",
+		FullMethod: "/main.Tag/RecognizeObject",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TagServer).IsHuman(ctx, req.(*IsHumanRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Tag_IsDog_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IsDogRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(TagServer).IsDog(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/main.Tag/IsDog",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TagServer).IsDog(ctx, req.(*IsDogRequest))
+		return srv.(TagServer).RecognizeObject(ctx, req.(*RecognizeObjectRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -732,12 +700,8 @@ var _Tag_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*TagServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "IsHuman",
-			Handler:    _Tag_IsHuman_Handler,
-		},
-		{
-			MethodName: "IsDog",
-			Handler:    _Tag_IsDog_Handler,
+			MethodName: "RecognizeObject",
+			Handler:    _Tag_RecognizeObject_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

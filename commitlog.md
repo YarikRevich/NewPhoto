@@ -41,3 +41,9 @@ _**Commit:8**_
 ```
 - Added the logic of attaching the tags for newely added photos
 ```
+
+_**Commit:9**_
+
+```
+- Added a special file with all the credentials and improved the recognition process
+```

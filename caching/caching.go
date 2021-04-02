@@ -4,6 +4,7 @@ import (
 	"context"
 	"math"
 	"log"
+	"os"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -19,11 +20,26 @@ type Redis struct{
 }
 
 func (r *Redis) Connect(){
+	addr, ok := os.LookupEnv("redisAddr")
+	if !ok{
+		log.Fatalln("redisAddr is not written in credentials.sh file")
+	}
+
+	password, ok := os.LookupEnv("redisPassword")
+	if !ok{
+		log.Fatalln("redisPassword is not written in credentials.sh file")
+	}
+
+	username, ok := os.LookupEnv("redisUsername")
+	if !ok{
+		log.Fatalln("redisUsername is not written in credentials.sh file")
+	}
+
 	r.db = redis.NewClient(&redis.Options{
-		Addr: "localhost:6379",
-		Password: "hello",
+		Addr: addr,
+		Password: password,
 		DB: 0,
-		Username: "default",
+		Username: username,
 	})
 	if err := r.db.Ping(ctx).Err(); err != nil{
 		log.Fatalln(err)

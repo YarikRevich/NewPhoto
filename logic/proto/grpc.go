@@ -5,6 +5,7 @@ import (
 	"NewPhoto/db"
 	"context"
 	"log"
+	"os"
 
 	"google.golang.org/grpc"
 )
@@ -82,26 +83,12 @@ func (s *NewPhoto) AllPhotos(r *AllPhotosRequest, stream NewPhotos_AllPhotosServ
 
 func (s *NewPhoto) UploadEqualPhoto(ctx context.Context, r *UploadEqualPhotoRequest) (*UploadEqualPhotoResponse, error) {
 
-	var tags string
-	human, err := s.Tag.IsHuman(context.Background(), &IsHumanRequest{Photo: r.GetPhoto()})
-	if err != nil{
-		log.Fatalln(err)
-	}
-	
-	dog, err := s.Tag.IsDog(context.Background(), &IsDogRequest{Photo: r.GetPhoto()})
+	tags, err := s.Tag.RecognizeObject(context.Background(), &RecognizeObjectRequest{Photo: r.GetPhoto()})
 	if err != nil{
 		log.Fatalln(err)
 	}
 
-	if human.GetOk(){
-		tags += "human"
-	}
-
-	if dog.GetOk(){
-		tags += ";dog"
-	}
-
-	db.DBInstanse.UploadEqualPhoto(r.GetUserid(), r.GetPhoto(), r.GetThumbnail(), r.GetExtension(), r.GetSize(), tags)
+	db.DBInstanse.UploadEqualPhoto(r.GetUserid(), r.GetPhoto(), r.GetThumbnail(), r.GetExtension(), r.GetSize(), tags.GetTags())
 	return &UploadEqualPhotoResponse{Error: "OK"}, nil
 }
 
@@ -342,7 +329,13 @@ func NewTag() TagClient {
 			grpc.MaxCallSendMsgSize(50 * 10e6),
 		),
 	}
-	client, err := grpc.Dial("localhost:9089", opts...)
+
+	aiAddr, ok := os.LookupEnv("aiAddr")
+	if !ok{
+		log.Fatalln("aiAddr is not written in credentials.sh file")
+	}
+
+	client, err := grpc.Dial(aiAddr, opts...)
 	if err != nil {
 		log.Fatalln(err.Error())
 	}

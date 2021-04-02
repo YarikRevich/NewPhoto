@@ -2,3 +2,7 @@
 
 .vscode/settings.json
 .DS_Store
+
+#Ignores credentials.sh file
+
+credentials.sh

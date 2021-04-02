@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"math"
+	"os"
 
 	. "NewPhoto/config"
 
@@ -22,7 +24,22 @@ type DB struct {
 }
 
 func (d *DB) CreateDB() {
-	db, err := sql.Open("mysql", "yariksvitlitskiy:yariksun4002@tcp(localhost)/newphotos")
+
+	password, ok := os.LookupEnv("mysqlPassword")
+	if !ok{
+		log.Fatalln("mysqlPassword is not written in credentials.sh file")
+	}
+	username, ok := os.LookupEnv("mysqlUsername")
+	if !ok{
+		log.Fatalln("mysqlUsername is not written in credentials.sh file")
+	}
+
+	table, ok := os.LookupEnv("mysqlTable")
+	if !ok{
+		log.Fatalln("mysqlTable is not written in credentials.sh file")
+	}
+
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost)/%s", username, password, table))
 	if err != nil {
 		Logger.WriteFatal(err.Error())
 	}

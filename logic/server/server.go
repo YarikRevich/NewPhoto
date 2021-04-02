@@ -4,6 +4,7 @@ import (
 	"NewPhoto/logic/proto"
 	"log"
 	"net"
+	"os"
 
 	"google.golang.org/grpc"
 )
@@ -21,7 +22,12 @@ func Run(){
 	auth := proto.NewAuthentication()
 	proto.RegisterAuthenticationServer(s, auth)
 
-	l, err := net.Listen("tcp", ":8082")
+	runAddr, ok := os.LookupEnv("runAddr")
+	if !ok{
+		log.Fatalln("runAddr is not written in credentials.sh file")
+	}
+
+	l, err := net.Listen("tcp", runAddr)
 	if err != nil{
 		log.Fatalln(err)
 	}
