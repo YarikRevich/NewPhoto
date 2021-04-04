@@ -39,7 +39,12 @@ func (d *DB) CreateDB() {
 		log.Fatalln("mysqlTable is not written in credentials.sh file")
 	}
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(localhost)/%s", username, password, table))
+	addr, ok := os.LookupEnv("mysqlAddr")
+	if !ok{
+		log.Fatalln("mysqlAddr is not written in credentials.sh file")
+	}
+
+	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, addr, table))
 	if err != nil {
 		Logger.WriteFatal(err.Error())
 	}

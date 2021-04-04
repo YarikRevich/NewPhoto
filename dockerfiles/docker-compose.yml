@@ -1,0 +1,65 @@
+version: "3.9"
+
+volumes:
+  newphoto_volume_mysql:
+    external: true
+  newphoto_volume_redis:
+    external: true
+
+services:
+  newphoto_mysql:
+    container_name: newphoto_mysql
+    image: newphoto_mysql:latest
+    volumes:
+      - "newphoto_volume_mysql:/var/lib/mysql"
+    ports:
+      - "3306:3306"
+
+  newphoto_redis:
+    container_name: newphoto_redis
+    image: newphoto_redis:latest
+    volumes:
+      - "newphoto_volume_redis:/usr/local/var/db/redis"
+    ports:
+      - "6379:6379"
+
+  newphotoai_server:
+    container_name: newphotoai_server
+    image: newphotoai_server:latest
+    ports:
+      - "9089:9089"
+
+  newphoto_server:
+    container_name: newphoto_server
+    image: newphoto_server:latest
+    depends_on:
+      - newphoto_mysql
+      - newphoto_redis
+      - newphotoai_server
+    ports:
+      - "8082:8082"
+    links:
+      - "newphoto_mysql:newphoto_mysql"
+      - "newphoto_redis:newphoto_redis"
+      - "newphotoai_server:newphotoai_server"
+
+  newphotoweb_server:
+    container_name: newphotoweb_server
+    image: newphotoweb_server:latest
+    depends_on:
+      - newphoto_server
+    ports:
+      - "8090:8090"
+    links:
+      - "newphoto_server:newphoto_server"
+
+  newphoto_nginx:
+    container_name: newphoto_nginx
+    image: newphoto_nginx
+    depends_on:
+      - newphotoweb_server
+    ports:
+      - "8080:80"
+      - "80:80"
+    links:
+      - "newphotoweb_server:newphotoweb_server"

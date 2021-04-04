@@ -47,3 +47,9 @@ _**Commit:9**_
 ```
 - Added a special file with all the credentials and improved the recognition process
 ```
+
+_**Commit:10**_
+
+```
+- Added dockerfiles for deploying and configures docker-compose afterwards
+```

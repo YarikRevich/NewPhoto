@@ -5,6 +5,7 @@ import (
 	"math"
 	"log"
 	"os"
+	"fmt"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -36,7 +37,7 @@ func (r *Redis) Connect(){
 	}
 
 	r.db = redis.NewClient(&redis.Options{
-		Addr: addr,
+		Addr: fmt.Sprintf("%s:6379", addr),
 		Password: password,
 		DB: 0,
 		Username: username,
