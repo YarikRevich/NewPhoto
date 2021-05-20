@@ -6,11 +6,8 @@ option go_package = "logic/proto";
 
 
 service Authentication {
-    //Service for user authentication before using main service ...
-
     rpc RegisterUser(UserRegisterRequest) returns (UserRegisterResponse);
     rpc LoginUser(UserLoginRequest) returns (UserLoginResponse);
-
 } 
 
 message UserRegisterRequest{
@@ -21,7 +18,7 @@ message UserRegisterRequest{
 }
 
 message UserRegisterResponse{
-    string error = 1;
+    bool ok = 1;
 }
 
 message UserLoginRequest{
@@ -31,46 +28,77 @@ message UserLoginRequest{
 
 message UserLoginResponse{
     string userid = 1;
-    string error = 2;
+    bool ok = 2;
 }
 
 service NewPhotos {
-    // Returns all the photos of the passed user ...
-    rpc  AllPhotos(AllPhotosRequest) returns (stream AllPhotosResponse) {};
+  
+    // ####################    Main funcs
 
-    // Uploads equal photo of the passed user ...
-    rpc  UploadEqualPhoto(UploadEqualPhotoRequest) returns (UploadEqualPhotoResponse);
+    rpc  GetPhotos(GetPhotosRequest) returns (stream GetPhotosResponse);
+
+    rpc GetVideos (GetVideosRequest) returns (stream GetVideosResponse);
+
+    rpc  UploadPhoto(stream UploadPhotoRequest) returns (UploadPhotoResponse);
+
+    rpc UploadVideo(stream UploadVideoRequest) returns (UploadVideoResponse);
+
+    //#####################    Account funcs   
     
-    // Returns current available storage for storing of the passed user ...
     rpc  GetUserinfo(GetUserinfoRequest) returns (GetUserinfoResponse);
 
-    rpc  GetFullPhotoByThumbnail(GetFullPhotoByThumbnailRequest) returns (GetFullPhotoByThumbnailResponse);
+    rpc GetUserAvatar(GetUserAvatarRequest) returns (GetUserAvatarResponse);
 
-    rpc  AllPhotosAlbum(AllPhotosAlbumRequest) returns (stream AllPhotosAlbumResponse);
+    rpc SetUserAvatar (SetUserAvatarRequest) returns (SetUserAvatarResponse);
 
-    rpc  GetAllAlbums(GetAllAlbumsRequest) returns (stream GetAllAlbumsResponse);
+    //#####################    Album funcs
+
+    rpc  GetPhotosFromAlbum(GetPhotosFromAlbumRequest) returns (stream GetPhotosFromAlbumResponse);
+
+    rpc GetVideosFromAlbum(GetVideosFromAlbumRequest) returns (stream GetVideosFromAlbumResponse);
+    
+    rpc  GetAlbums(GetAlbumsRequest) returns (stream GetAlbumsResponse);
 
     rpc  CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse);
 
     rpc  DeleteAlbum(DeleteAlbumRequest) returns (DeleteAlbumResponse);
 
     rpc  UploadPhotoToAlbum(stream UploadPhotoToAlbumRequest) returns (UploadPhotoToAlbumResponse);
+
+    rpc DeletePhotoFromAlbum(stream DeletePhotoFromAlbumRequest) returns (DeletePhotoFromAlbumResponse);
+
+    //#####################    Util funcs
+
+    rpc  GetFullPhotoByThumbnail(GetFullPhotoByThumbnailRequest) returns (GetFullPhotoByThumbnailResponse);
 }
 
-message AllPhotosRequest {
+
+// ####################    Main funcs' messages
+
+message GetPhotosRequest {
     string userid = 1;
 }
 
-message AllPhotosResponse {
+message GetPhotosResponse {
     bytes photo = 1; 
     bytes thumbnail = 2;
     string extension = 3;
     double size = 4;
     string tags = 5;
-    string error = 6;
+    bool ok = 6;
 }
 
-message UploadEqualPhotoRequest {
+message GetVideosRequest {
+    string userid = 1;
+}
+
+message GetVideosResponse {
+    bytes video = 1;
+    bool ok = 2;
+}
+
+
+message UploadPhotoRequest {
     string userid = 1;
     bytes photo = 2;
     bytes thumbnail = 3;
@@ -78,20 +106,22 @@ message UploadEqualPhotoRequest {
     double size = 5;
 }
 
-message UploadEqualPhotoResponse {
-    string error = 1;
+message UploadPhotoResponse {
+    bool ok = 1;
 }
 
-message EqualPhotoRequest{
+message UploadVideoRequest {
     string userid = 1;
-    string name = 2;
+    bytes video = 2;
+    string extension = 3;
+    double size = 4;
 }
 
-message EqualPhotoResponse {
-    bytes photo = 1;
-    bytes thumbnail = 2;
-    string error = 3;
+message UploadVideoResponse {
+    bool ok = 1;
 }
+
+//#####################    Account funcs' messages   
 
 message GetUserinfoRequest {
     string userid = 1;
@@ -101,42 +131,62 @@ message GetUserinfoResponse {
     double storage = 1;
     string firstname = 2;
     string secondname = 3;
-    string error = 4;
+    bool ok = 4;
 }
 
-message GetFullPhotoByThumbnailRequest {
+message GetUserAvatarRequest{
     string userid = 1;
-    bytes thumbnail = 2;
 }
 
-message GetFullPhotoByThumbnailResponse {
-    bytes photo = 1;
-    string error = 2;
+message GetUserAvatarResponse{
+    bytes avatar = 1;
+    bool ok = 2;
 }
 
-message AllPhotosAlbumRequest{
+message SetUserAvatarRequest {
+    string userid = 1;
+    bytes avatar = 2;
+}
+
+message SetUserAvatarResponse {
+    bool ok = 1;
+}
+
+//#####################    Album funcs' messages
+
+message GetPhotosFromAlbumRequest{
     string userid = 1;
     string name = 2; 
 }
 
-message AllPhotosAlbumResponse{
+message GetPhotosFromAlbumResponse{
     bytes photo = 1; 
     bytes thumbnail = 2;
     string extension = 3;
     double size = 4;
-    string error = 5;
-    string album = 6;
+    string album = 5;
+    bool ok = 6;
 }
 
-message GetAllAlbumsRequest{
+message GetVideosFromAlbumRequest{
+    string userid = 1;
+    string name = 2; 
+}
+
+message GetVideosFromAlbumResponse{
+    bytes video = 1; 
+    bool ok = 2;
+}
+
+message GetAlbumsRequest{
     string userid = 1;
 }
 
-message GetAllAlbumsResponse{
+message GetAlbumsResponse{
     string name = 1;
     bytes latest_photo = 2;
     bytes latest_photo_thumbnail = 3;
-    string error = 4;
+    bool ok = 4;
 }
 
 message CreateAlbumRequest {
@@ -145,7 +195,7 @@ message CreateAlbumRequest {
 }
 
 message CreateAlbumResponse {
-    string error = 1;
+    bool ok = 1;
 }
 
 message DeleteAlbumRequest{
@@ -154,7 +204,7 @@ message DeleteAlbumRequest{
 }
 
 message DeleteAlbumResponse{
-    string error = 1;
+    bool ok = 1;
 }
 
 message UploadPhotoToAlbumRequest{
@@ -167,8 +217,32 @@ message UploadPhotoToAlbumRequest{
 }
 
 message UploadPhotoToAlbumResponse{
-    string error = 1;
+    bool ok = 1;
 }
+
+
+message DeletePhotoFromAlbumRequest {
+    string userid = 1;
+    string album = 2;
+    bytes photo = 3;
+}
+
+message DeletePhotoFromAlbumResponse {
+    bool ok = 1;
+}
+
+//#####################    Util funcs' messages
+
+message GetFullPhotoByThumbnailRequest {
+    string userid = 1;
+    bytes thumbnail = 2;
+}
+
+message GetFullPhotoByThumbnailResponse {
+    bytes photo = 1;
+    bool ok = 2;
+}
+
 
 service Tag{
     rpc RecognizeObject(RecognizeObjectRequest) returns (RecognizeObjectResponse){};
@@ -180,4 +254,5 @@ message RecognizeObjectRequest{
 
 message RecognizeObjectResponse{
     string tags = 1;
+    bool ok = 2;
 }

@@ -1,9 +1,19 @@
 package caching
 
 import (
+	"NewPhoto/log"
 	"encoding/json"
 	"errors"
-	"log"
+)
+
+const (
+	GET_PHOTOS                  = "GetPhotos"
+	GET_VIDEOS                  = "GetVideos"
+	GET_PHOTOS_FROM_ALBUM       = "GetPhotosFromAlbum"
+	GET_VIDEOS_FROM_ALBUM       = "GetVideosFromAlbum"
+	GET_ALBUMS                  = "GetAlbums"
+	GET_USER_INFO               = "GetUserinfo"
+	GET_FULL_PHOTO_BY_THUMBNAIL = "GetFullPhotoByThumbnail"
 )
 
 type Definer interface {
@@ -12,8 +22,7 @@ type Definer interface {
 
 type D struct{}
 
-// Model to unparse AllPhotos cached values
-type AllPhotosModel struct {
+type GetPhotosModel struct {
 	Photo     []byte
 	Thumbnail []byte
 	Extension string
@@ -21,15 +30,25 @@ type AllPhotosModel struct {
 	Tags      string
 }
 
-type AllPhotosAlbumModel struct {
+type GetVideosModel struct {
+	Video []byte
+}
+
+type GetPhotosFromAlbum struct {
 	Photo     []byte
 	Thumbnail []byte
 	Extension string
 	Size      float64
+	Tags      string
 	Album     string
 }
 
-type GetAllAlbumsModel struct {
+type GetVideosFromAlbum struct {
+	Video []byte
+	Album string
+}
+
+type GetAlbumsModel struct {
 	Name                 string
 	LatestPhoto          []byte
 	LatestPhotoThumbnail []byte
@@ -48,30 +67,31 @@ type GetFullPhotoByThumbnail struct {
 func (d *D) Define(c string, args string) (interface{}, error) {
 	// Defines type of command .. then unparses it's values ...
 
+	var stat interface{} = 0
 	switch c {
-	case "AllPhotos":
-		var stat []AllPhotosModel
-		json.Unmarshal([]byte(args), &stat)
-		return stat, nil
-	case "AllPhotosAlbum":
-		var stat []AllPhotosAlbumModel
-		json.Unmarshal([]byte(args), &stat)
-		return stat, nil
-	case "GetAllAlbums":
-		var stat []GetAllAlbumsModel
-		json.Unmarshal([]byte(args), &stat)
-		return stat, nil
-	case "GetUserinfo":
-		var stat GetUserinfoModel
-		json.Unmarshal([]byte(args), &stat)
-		return stat, nil
-	case "GetFullPhotoByThumbnail":
-		var stat GetFullPhotoByThumbnail
-		json.Unmarshal([]byte(args), &stat)
-		return stat, nil
-	default:
-		return nil, errors.New("type is not defined")
+	case GET_PHOTOS:
+		stat = new([]GetPhotosModel)
+	case GET_VIDEOS:
+		stat = new([]GetVideosModel)
+	case GET_VIDEOS_FROM_ALBUM:
+		stat = new([]GetVideosFromAlbum)
+	case GET_PHOTOS_FROM_ALBUM:
+		stat = new([]GetPhotosFromAlbum)
+	case GET_ALBUMS:
+		stat = new([]GetAlbumsModel)
+	case GET_USER_INFO:
+		stat = new(GetUserinfoModel)
+	case GET_FULL_PHOTO_BY_THUMBNAIL:
+		stat = new(GetFullPhotoByThumbnail)
 	}
+	if err := json.Unmarshal([]byte(args), &stat); err != nil {
+		log.Logger.Fatalln(err)
+	}
+	var err error
+	if _, ok := stat.(int); ok {
+		err = errors.New("type is not defined")
+	}
+	return stat, err
 }
 
 func NewDefiner() Definer {
@@ -87,7 +107,7 @@ type DC struct{}
 func (dc *DC) Configure(data interface{}) string {
 	result, err := json.Marshal(data)
 	if err != nil {
-		log.Fatalln(err)
+		log.Logger.Fatalln(err)
 	}
 	return string(result)
 }

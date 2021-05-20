@@ -5,10 +5,6 @@ import(
 	
 )
 
-var (
-	
-)
-
 func main(){
 	server.Run()
 }

@@ -1,42 +1,31 @@
 package log
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/sirupsen/logrus"
 )
 
-type Log interface{
-	New()
-	WriteInfo(string)
-	WriteWarn(string)
-	WriteFatal(string)
+var (
+	Logger = New()
+)
+
+func OpenLogFile() *os.File {
+	if _, err := os.Stat("error.log"); os.IsNotExist(err) {
+		if _, err := os.Create("error.log"); err != nil{
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}
+	f, err := os.OpenFile("error.log", os.O_WRONLY|os.O_APPEND, os.ModeAppend)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	return f
 }
 
-type log struct{
-	l *logrus.Logger
-}
-
-func (l *log)New(){
-	l.l = logrus.New()
-	l.l.SetOutput(os.Stdout)
-	l.l.SetLevel(logrus.InfoLevel)
-}
-
-func (l *log)WriteInfo(t string){
-	l.l.Infoln(t)
-}
-
-func (l *log)WriteWarn(t string){
-	l.l.Warnln(t)
-}
-
-func (l *log)WriteFatal(t string){
-	l.l.Warnln(t)
-}
-
-func New()Log{
-	l := new(log)
-	l.New()
+func New() *logrus.Logger {
+	l := logrus.New()
+	l.Out = OpenLogFile()
 	return l
 }
