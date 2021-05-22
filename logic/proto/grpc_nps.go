@@ -200,12 +200,12 @@ func (s *NewPhoto) GetVideosFromAlbum(r *GetVideosFromAlbumRequest, stream NewPh
 
 		var model []caching.GetVideosFromAlbum
 		for _, value := range result {
-			model = append(model, caching.GetVideosFromAlbum{Video: value[0].([]byte)})
+			model = append(model, caching.GetVideosFromAlbum{Video: value[0].([]byte), Extension: value[1].(string)})
 		}
 		conf := caching.NewConfigurator()
 		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_VIDEOS_FROM_ALBUM, conf.Configure(model))
 		for _, value := range result {
-			if err := stream.Send(&GetVideosFromAlbumResponse{Video: value[0].([]byte), Ok: true}); err != nil {
+			if err := stream.Send(&GetVideosFromAlbumResponse{Video: value[0].([]byte), Extension: value[1].(string), Ok: true}); err != nil {
 				continue
 			}
 		}
@@ -226,6 +226,25 @@ func (s *NewPhoto) UploadPhotoToAlbum(stream NewPhotos_UploadPhotoToAlbumServer)
 			s.DBInstanse.UploadPhotoToAlbum(recv.GetUserid(), recv.GetExtension(), recv.GetAlbum(), recv.GetSize(), recv.GetPhoto(), recv.GetThumbnail())
 		}
 		if err := stream.SendAndClose(&UploadPhotoToAlbumResponse{Ok: true}); err != nil {
+			log.Logger.Fatalln(err)
+		}
+	}
+	return nil
+}
+
+func (s *NewPhoto) UploadVideoToAlbum(stream NewPhotos_UploadVideoToAlbumServer) error {
+	select {
+	case <-stream.Context().Done():
+		return nil
+	default:
+		for {
+			recv, err := stream.Recv()
+			if err != nil {
+				break
+			}
+			s.DBInstanse.UploadVideoToAlbum(recv.GetUserid(), recv.GetAlbum(), recv.GetExtension(), recv.GetVideo(), recv.GetSize())
+		}
+		if err := stream.SendAndClose(&UploadVideoToAlbumResponse{Ok: true}); err != nil {
 			log.Logger.Fatalln(err)
 		}
 	}
@@ -274,6 +293,25 @@ func (s *NewPhoto) DeletePhotoFromAlbum(stream NewPhotos_DeletePhotoFromAlbumSer
 	}
 }
 
+func (s *NewPhoto) DeleteVideoFromAlbum(stream NewPhotos_DeleteVideoFromAlbumServer) error {
+	select {
+	case <-stream.Context().Done():
+		return nil
+	default:
+		for {
+			msg, err := stream.Recv()
+			if err != nil {
+				break
+			}
+			s.DBInstanse.DeleteVideoFromAlbum(msg.GetUserid(), msg.GetAlbum(), msg.GetVideo())
+		}
+		if err := stream.SendAndClose(&DeleteVideoFromAlbumResponse{Ok: true}); err != nil {
+			log.Logger.Fatalln(err)
+		}
+		return nil
+	}
+}
+
 func (s *NewPhoto) CreateAlbum(ctx context.Context, r *CreateAlbumRequest) (*CreateAlbumResponse, error) {
 	s.DBInstanse.CreateAlbum(r.GetUserid(), r.GetName())
 	return &CreateAlbumResponse{Ok: true}, nil
@@ -282,6 +320,11 @@ func (s *NewPhoto) CreateAlbum(ctx context.Context, r *CreateAlbumRequest) (*Cre
 func (s *NewPhoto) DeleteAlbum(ctx context.Context, r *DeleteAlbumRequest) (*DeleteAlbumResponse, error) {
 	s.DBInstanse.DeleteAlbum(r.GetUserid(), r.GetName())
 	return &DeleteAlbumResponse{Ok: true}, nil
+}
+
+func (s *NewPhoto) GetAlbumInfo(ctx context.Context, r *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error) {
+	n := s.DBInstanse.GetAlbumInfo(r.GetUserid(), r.GetAlbum())
+	return &GetAlbumInfoResponse{Ok: true, MediaNum: n}, nil
 }
 
 func (s *NewPhoto) GetFullPhotoByThumbnail(ctx context.Context, r *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error) {

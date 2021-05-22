@@ -44,8 +44,9 @@ type GetPhotosFromAlbum struct {
 }
 
 type GetVideosFromAlbum struct {
-	Video []byte
-	Album string
+	Video     []byte
+	Extension string
+	Album     string
 }
 
 type GetAlbumsModel struct {

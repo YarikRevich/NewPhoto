@@ -56,4 +56,9 @@ _**Commit:10**_
 
 _**Commit:11**_
 
-- 
+```
+- Improved the design of services
+- Implemented new rpc funcs
+- Implemented new db interfaces
+- Fixed bugs
+```

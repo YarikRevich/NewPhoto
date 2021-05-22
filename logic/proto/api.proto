@@ -65,7 +65,13 @@ service NewPhotos {
 
     rpc  UploadPhotoToAlbum(stream UploadPhotoToAlbumRequest) returns (UploadPhotoToAlbumResponse);
 
+    rpc  UploadVideoToAlbum(stream UploadVideoToAlbumRequest) returns (UploadVideoToAlbumResponse);
+
     rpc DeletePhotoFromAlbum(stream DeletePhotoFromAlbumRequest) returns (DeletePhotoFromAlbumResponse);
+
+    rpc DeleteVideoFromAlbum(stream DeleteVideoFromAlbumRequest) returns (DeleteVideoFromAlbumResponse);
+
+    rpc GetAlbumInfo (GetAlbumInfoRequest) returns (GetAlbumInfoResponse);
 
     //#####################    Util funcs
 
@@ -175,7 +181,8 @@ message GetVideosFromAlbumRequest{
 
 message GetVideosFromAlbumResponse{
     bytes video = 1; 
-    bool ok = 2;
+    string extension = 2;
+    bool ok = 3;
 }
 
 message GetAlbumsRequest{
@@ -220,6 +227,17 @@ message UploadPhotoToAlbumResponse{
     bool ok = 1;
 }
 
+message UploadVideoToAlbumRequest{
+    string userid = 1;
+    bytes video = 2;
+    string extension = 3;
+    double size = 4;
+    string album = 5;
+}
+
+message UploadVideoToAlbumResponse{
+    bool ok = 1;
+}
 
 message DeletePhotoFromAlbumRequest {
     string userid = 1;
@@ -229,6 +247,26 @@ message DeletePhotoFromAlbumRequest {
 
 message DeletePhotoFromAlbumResponse {
     bool ok = 1;
+}
+
+message DeleteVideoFromAlbumRequest {
+    string userid = 1;
+    string album = 2;
+    bytes video = 3;
+}
+
+message DeleteVideoFromAlbumResponse {
+    bool ok = 1;
+}
+
+message GetAlbumInfoRequest {
+    string userid = 1;
+    string album = 2;
+}
+
+message GetAlbumInfoResponse {
+    bool ok = 1;
+    int64 media_num = 2;
 }
 
 //#####################    Util funcs' messages

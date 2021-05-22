@@ -14,10 +14,10 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/sirupsen/logrus"
 )
 
 var (
-	// DBInstanse      = New()
 	DefaultCapacity = 15 * math.Pow(10, 9)
 )
 
@@ -45,12 +45,14 @@ type IDB interface {
 
 	GetAlbums(userid string) [][3]interface{}
 	GetPhotosFromAlbum(userid, name string) [][5]interface{}
-	GetVideosFromAlbum(userid, name string) [][1]interface{}
+	GetVideosFromAlbum(userid, name string) [][2]interface{}
 	UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte)
 	UploadVideoToAlbum(userid, album, extension string, video []byte, size float64)
 	CreateAlbum(userid, name string) bool
 	DeleteAlbum(userid, name string) bool
 	DeletePhotoFromAlbum(userid, album string, photo []byte)
+	DeleteVideoFromAlbum(userid, album string, video []byte)
+	GetAlbumInfo(userid, album string) int64
 
 	GetFullPhotoByThumbnail(userid string, thumbnail []byte) []byte
 }
@@ -105,7 +107,7 @@ func (d *DB) CreateTables() {
 
 func (d *DB) CloseDB() {
 	if err := d.db.Close(); err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "CloseDB"}).Fatalln(err)
 	}
 }
 
@@ -113,19 +115,19 @@ func (d *DB) LoginUser(login, pass string) (string, error) {
 	passedEncodedCredentials := utils.EncodeLogin(login, pass)
 	rows, err := d.db.Query("SELECT userid FROM users")
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "LoginUser"}).Fatalln(err)
 	}
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "LoginUser"}).Fatalln(err)
 		}
 	}()
 
 	for rows.Next() {
 		var userid string
 		if err := rows.Scan(&userid); err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "LoginUser"}).Fatalln(err)
 		}
 		if userid == string(passedEncodedCredentials) {
 			return string(passedEncodedCredentials), nil
@@ -142,7 +144,7 @@ func (d *DB) RegisterUser(login, pass, firstname, secondname string) bool {
 		if mysqlError.Number == 1062 {
 			return false
 		}
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "RegisterUser"}).Fatalln(err)
 	}
 	return true
 }
@@ -150,19 +152,19 @@ func (d *DB) RegisterUser(login, pass, firstname, secondname string) bool {
 func (d *DB) IsLogin(uid string) bool {
 	rows, err := d.db.Query("SELECT userid FROM users")
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "IsLogin"}).Fatalln(err)
 	}
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "IsLogin"}).Fatalln(err)
 		}
 	}()
 
 	for rows.Next() {
 		var userid string
 		if err := rows.Scan(&userid); err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "IsLogin"}).Fatalln(err)
 		}
 		if userid == uid {
 			return true
@@ -176,12 +178,12 @@ func (d *DB) GetPhotos(userid string) [][5]interface{} {
 
 	rows, err := d.db.Query("SELECT * FROM photos WHERE userid = ?", userid)
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetPhotos"}).Fatalln(err)
 	}
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotos"}).Fatalln(err)
 		}
 	}()
 	model := struct {
@@ -195,9 +197,8 @@ func (d *DB) GetPhotos(userid string) [][5]interface{} {
 	}{}
 	var result [][5]interface{}
 	for rows.Next() {
-		err := rows.Scan(&model.Userid, &model.Photo, &model.Thumbnail, &model.Extension, &model.Size, &model.Album, &model.Tags)
-		if err != nil {
-			log.Logger.Fatalln(err.Error())
+		if err := rows.Scan(&model.Userid, &model.Photo, &model.Thumbnail, &model.Extension, &model.Size, &model.Album, &model.Tags); err != nil{
+			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotos"}).Fatalln(err)
 		}
 		result = append(result, [5]interface{}{model.Photo, model.Thumbnail, model.Extension, model.Size, model.Tags.String})
 	}
@@ -207,12 +208,12 @@ func (d *DB) GetPhotos(userid string) [][5]interface{} {
 func (d *DB) GetVideos(userid string) [][1]interface{} {
 	rows, err := d.db.Query("SELECT * FROM videos WHERE userid = ?", userid)
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetVideos"}).Fatalln(err)
 	}
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetVideos"}).Fatalln(err)
 		}
 	}()
 	model := struct {
@@ -222,9 +223,8 @@ func (d *DB) GetVideos(userid string) [][1]interface{} {
 	}{}
 	var result [][1]interface{}
 	for rows.Next() {
-		err := rows.Scan(&model.Userid, &model.Video, &model.Album)
-		if err != nil {
-			log.Logger.Fatalln(err.Error())
+		if err := rows.Scan(&model.Userid, &model.Video, &model.Album); err != nil{
+			log.Logger.WithFields(logrus.Fields{"qt": "GetVideos"}).Fatalln(err)
 		}
 		result = append(result, [1]interface{}{&model.Video})
 	}
@@ -234,14 +234,14 @@ func (d *DB) GetVideos(userid string) [][1]interface{} {
 func (d *DB) UploadPhoto(userid string, photo, thumbnail []byte, extension string, size float64, tags string) {
 	_, err := d.db.Exec("INSERT INTO photos (userid, photo, thumbnail, extension, size, tags) VALUES (?, ?, ?, ?, ?, ?)", userid, photo, thumbnail, extension, size, tags)
 	if err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhoto"}).Fatalln(err)
 	}
 }
 
 func (d *DB) UploadVideo(userid, extension string, video []byte, size float64) {
 	_, err := d.db.Exec("INSERT INTO videos (userid, video, extension, size) VALUES (?, ?, ?, ?)", userid, video, extension, size)
 	if err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideo"}).Fatalln(err)
 	}
 }
 
@@ -252,18 +252,17 @@ func (d *DB) GetUserinfo(userid string) (string, string, float64) {
 	var storage float64
 	err := row.Scan(&storage)
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 	}
 
 	rows, err := d.db.Query("SELECT size FROM photos WHERE userid = ?", userid)
-
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 	}
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 		}
 	}()
 
@@ -271,7 +270,7 @@ func (d *DB) GetUserinfo(userid string) (string, string, float64) {
 	for rows.Next() {
 		var storage float64
 		if err := rows.Scan(&storage); err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 		}
 		allphotossize += storage
 	}
@@ -282,7 +281,7 @@ func (d *DB) GetUserinfo(userid string) (string, string, float64) {
 	var secondname string
 
 	if err := row.Scan(&firstname, &secondname); err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 	}
 	return firstname, secondname, storage - allphotossize
 }
@@ -293,7 +292,7 @@ func (d *DB) GetUserAvatar(userid string) []byte {
 	var avatar []byte
 
 	if err := row.Scan(&avatar); err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 	}
 	return avatar
 }
@@ -301,20 +300,20 @@ func (d *DB) GetUserAvatar(userid string) []byte {
 func (d *DB) SetUserAvatar(userid string, avatar []byte) {
 	_, err := d.db.Exec("UPDATE users SET avatar = ? WHERE userid = ?", avatar, userid)
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "SetUserAvatar"}).Fatalln(err)
 	}
 }
 
 func (d *DB) GetAlbums(userid string) [][3]interface{} {
 	rows, err := d.db.Query("SELECT name FROM albums WHERE userid = ?", userid)
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
 	}
 
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
 		}
 	}()
 
@@ -322,9 +321,8 @@ func (d *DB) GetAlbums(userid string) [][3]interface{} {
 
 	for rows.Next() {
 		var album string
-		err := rows.Scan(&album)
-		if err != nil {
-			log.Logger.Fatalln(err.Error())
+		if err := rows.Scan(&album); err != nil{
+			log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
 		}
 		albums = append(albums, album)
 	}
@@ -335,7 +333,7 @@ func (d *DB) GetAlbums(userid string) [][3]interface{} {
 		var photo []byte
 		var thumbnail []byte
 		if err := row.Scan(&photo, &thumbnail); err != nil && err != sql.ErrNoRows {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
 		}
 		result = append(result, [3]interface{}{album, photo, thumbnail})
 	}
@@ -345,12 +343,12 @@ func (d *DB) GetAlbums(userid string) [][3]interface{} {
 func (d *DB) GetPhotosFromAlbum(userid, name string) [][5]interface{} {
 	rows, err := d.db.Query(`SELECT userid, photo, thumbnail, extension, size, album FROM photos WHERE userid = ? AND (album like ? OR album like ? OR album like ?)`, userid, "%"+name+",%", "%,"+name+"%", "%,"+name+",%")
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetPhotosFromAlbum"}).Fatalln(err)
 	}
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotosFromAlbum"}).Fatalln(err)
 		}
 	}()
 	var model struct {
@@ -365,36 +363,38 @@ func (d *DB) GetPhotosFromAlbum(userid, name string) [][5]interface{} {
 	for rows.Next() {
 		err := rows.Scan(&model.Userid, &model.Photo, &model.Thumbnail, &model.Extension, &model.Size, &model.Album)
 		if err != nil {
-			continue
+			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotosFromAlbum"}).Fatalln(err)
 		}
 		result = append(result, [5]interface{}{model.Photo, model.Thumbnail, model.Extension, model.Size, model.Album.String})
 	}
 	return result
 }
 
-func (d *DB) GetVideosFromAlbum(userid, name string) [][1]interface{} {
-	rows, err := d.db.Query("SELECT * FROM videos WHERE userid = ? AND album = ?", userid, name)
+func (d *DB) GetVideosFromAlbum(userid, name string) [][2]interface{} {
+	rows, err := d.db.Query("SELECT * FROM videos WHERE userid = ? AND (album like ? OR album like ? OR album like ?)", userid, "%"+name+",%", "%,"+name+"%", "%,"+name+",%")
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "GetVideosFromAlbum"}).Fatalln(err)
 	}
 	defer func() {
 		err := rows.Close()
 		if err != nil {
-			log.Logger.Fatalln(err)
+			log.Logger.WithFields(logrus.Fields{"qt": "GetVideosFromAlbum"}).Fatalln(err)
 		}
 	}()
 	model := struct {
-		Userid string
-		Video  []byte
-		Album  sql.NullString
+		Userid    string
+		Video     []byte
+		Extension string
+		Size      float64
+		Album     sql.NullString
 	}{}
-	var result [][1]interface{}
+	var result [][2]interface{}
 	for rows.Next() {
-		err := rows.Scan(&model.Userid, &model.Video, &model.Album)
+		err := rows.Scan(&model.Userid, &model.Video, &model.Extension, &model.Size, &model.Album)
 		if err != nil {
-			log.Logger.Fatalln(err.Error())
+			log.Logger.WithFields(logrus.Fields{"qt": "GetVideosFromAlbum"}).Fatalln(err)
 		}
-		result = append(result, [1]interface{}{&model.Video})
+		result = append(result, [2]interface{}{model.Video, model.Extension})
 	}
 	return result
 }
@@ -403,52 +403,52 @@ func (d *DB) UploadPhotoToAlbum(userid, extension, album string, size float64, p
 	_, err := d.db.Exec(
 		"INSERT INTO photos (userid, photo, thumbnail, extension, size, album) SELECT ?, ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT * FROM photos WHERE userid = ? AND photo = ?) ", userid, photo, thumbnail, extension, size, album+",", userid, photo)
 	if err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhotoToAlbum"}).Fatalln(err)
 	}
 	row := d.db.QueryRow("SELECT album FROM photos WHERE userid = ? AND photo = ?", userid, photo)
 	var a sql.NullString
 	if err := row.Scan(&a); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhotoToAlbum"}).Fatalln(err)
 	}
 
 	split := strings.Split(a.String, ",")
-	if len(split) == 1 && split[0] == album {
+	if len(split) == 2 && split[0] == album {
 		return
 	}
 
-	a.String = strings.Join(append(split, album+","), "")
+	a.String = fmt.Sprintf("%s%s,", a.String, album)
 	if _, err := d.db.Exec("UPDATE photos SET album = ? WHERE userid = ? AND photo = ?", a.String, userid, photo); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhotoToAlbum"}).Fatalln(err)
 	}
 }
 
 func (d *DB) UploadVideoToAlbum(userid, album, extension string, video []byte, size float64) {
 	_, err := d.db.Exec(
-		"INSERT INTO videos (userid, video, extension, size, album) SELECT ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT * FROM videos WHERE userid = ? AND video = ?) ", userid, video, extension, size, album, userid, video)
+		"INSERT INTO videos (userid, video, extension, size, album) SELECT ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT * FROM videos WHERE userid = ? AND video = ?) ", userid, video, extension, size, album+",", userid, video)
 	if err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideoToAlbum"}).Fatalln(err)
 	}
 
 	row := d.db.QueryRow("SELECT album FROM videos WHERE userid = ? AND video = ?", userid, video)
-	var a string
+	var a sql.NullString
 	if err := row.Scan(&a); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideoToAlbum"}).Fatalln(err)
 	}
-	split := strings.Split(a, ",")
-	if len(split) == 1 && split[0] == album {
+	split := strings.Split(a.String, ",")
+	if len(split) == 2 && split[0] == album {
 		return
 	}
 
-	a = strings.Join(append(split, album), ",")
-	if _, err := d.db.Exec("UPDATE videos SET album = ? WHERE userid = ? AND video = ?", a, userid, video); err != nil {
-		log.Logger.Fatalln(err)
+	a.String = fmt.Sprintf("%s%s,", a.String, album)
+	if _, err := d.db.Exec("UPDATE videos SET album = ? WHERE userid = ? AND video = ?", a.String, userid, video); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideoToAlbum"}).Fatalln(err)
 	}
 }
 
 func (d *DB) CreateAlbum(userid, name string) bool {
 	_, err := d.db.Exec("INSERT IGNORE INTO albums (userid, name) VALUES(?, ?)", userid, name)
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "CreateAlbum"}).Fatalln(err)
 	}
 	return true
 }
@@ -456,7 +456,7 @@ func (d *DB) CreateAlbum(userid, name string) bool {
 func (d *DB) DeleteAlbum(userid, name string) bool {
 	_, err := d.db.Exec("DELETE FROM albums WHERE userid = ? AND name = ?", userid, name)
 	if err != nil {
-		log.Logger.Fatalln(err.Error())
+		log.Logger.WithFields(logrus.Fields{"qt": "DeleteAlbum"}).Fatalln(err)
 	}
 	return true
 }
@@ -465,25 +465,64 @@ func (d *DB) DeletePhotoFromAlbum(userid, album string, photo []byte) {
 	row := d.db.QueryRow("SELECT album FROM photos WHERE userid = ? AND photo = ?", userid, photo)
 	var a string
 	if err := row.Scan(&a); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "DeletePhotoFromAlbum"}).Fatalln(err)
 	}
 	split := strings.Split(a, ",")
 	for i, v := range split {
 		if v == album {
-			a = strings.Join(append(split[:i], split[i+1:]...), ",")
+			if len(split) == 2 && len(split[1]) == 0 {
+				a = ""
+			} else {
+				a = strings.Join(append(split[i:], split[i+1:]...), ",")
+			}
 			break
 		}
 	}
-	if _, err := d.db.Exec("UPDATE photos SET album = ? WHERE userid = ? AND album = ?", album, userid, album); err != nil {
-		log.Logger.Fatalln(err)
+
+	if _, err := d.db.Exec("UPDATE photos SET album = ? WHERE userid = ? AND photo = ?", a, userid, photo); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "DeletePhotoFromAlbum"}).Fatalln(err)
 	}
+}
+
+func (d *DB) DeleteVideoFromAlbum(userid, album string, video []byte) {
+	row := d.db.QueryRow("SELECT album FROM videos WHERE userid = ? AND video = ?", userid, video)
+	var a string
+	if err := row.Scan(&a); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "DeleteVideoFromAlbum"}).Fatalln(err)
+	}
+	split := strings.Split(a, ",")
+	for i, v := range split {
+		if v == album {
+			a = strings.Join(append(split[i:], split[i+1:]...), ",")
+			break
+		}
+	}
+
+	if _, err := d.db.Exec("UPDATE videos SET album = ? WHERE userid = ? AND video = ?", a, userid, video); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "DeleteVideoFromAlbum"}).Fatalln(err)
+	}
+}
+
+func (d *DB) GetAlbumInfo(userid, album string) int64 {
+	row := d.db.QueryRow("SELECT COUNT(*) FROM photos as p WHERE p.userid = ? AND (p.album like ? OR p.album like ? OR p.album like ?)", userid, "%"+album+",%", "%,"+album+"%", "%,"+album+",%")
+	var mediaNumPhotos int64
+	if err := row.Scan(&mediaNumPhotos); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "GetAlbumInfo"}).Fatalln(err)
+	}
+
+	row = d.db.QueryRow("SELECT COUNT(*) FROM videos as v WHERE v.userid = ? AND (v.album like ? OR v.album like ? OR v.album like ?)", userid, "%"+album+",%", "%,"+album+"%", "%,"+album+",%")
+	var mediaNumVideos int64
+	if err := row.Scan(&mediaNumVideos); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "GetAlbumInfo"}).Fatalln(err)
+	}
+	return mediaNumPhotos + mediaNumVideos
 }
 
 func (d *DB) GetFullPhotoByThumbnail(userid string, thumbnail []byte) []byte {
 	row := d.db.QueryRow("SELECT photo FROM photos WHERE userid = ? AND thumbnail = ?", userid, thumbnail)
 	var photo []byte
 	if err := row.Scan(&photo); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "GetFullPhotoByThumbnail"}).Fatalln(err)
 	}
 	return photo
 }

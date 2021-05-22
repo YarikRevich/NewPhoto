@@ -153,7 +153,10 @@ type NewPhotosClient interface {
 	CreateAlbum(ctx context.Context, in *CreateAlbumRequest, opts ...grpc.CallOption) (*CreateAlbumResponse, error)
 	DeleteAlbum(ctx context.Context, in *DeleteAlbumRequest, opts ...grpc.CallOption) (*DeleteAlbumResponse, error)
 	UploadPhotoToAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadPhotoToAlbumClient, error)
+	UploadVideoToAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadVideoToAlbumClient, error)
 	DeletePhotoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeletePhotoFromAlbumClient, error)
+	DeleteVideoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeleteVideoFromAlbumClient, error)
+	GetAlbumInfo(ctx context.Context, in *GetAlbumInfoRequest, opts ...grpc.CallOption) (*GetAlbumInfoResponse, error)
 	GetFullPhotoByThumbnail(ctx context.Context, in *GetFullPhotoByThumbnailRequest, opts ...grpc.CallOption) (*GetFullPhotoByThumbnailResponse, error)
 }
 
@@ -472,8 +475,42 @@ func (x *newPhotosUploadPhotoToAlbumClient) CloseAndRecv() (*UploadPhotoToAlbumR
 	return m, nil
 }
 
+func (c *newPhotosClient) UploadVideoToAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadVideoToAlbumClient, error) {
+	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[8], "/main.NewPhotos/UploadVideoToAlbum", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &newPhotosUploadVideoToAlbumClient{stream}
+	return x, nil
+}
+
+type NewPhotos_UploadVideoToAlbumClient interface {
+	Send(*UploadVideoToAlbumRequest) error
+	CloseAndRecv() (*UploadVideoToAlbumResponse, error)
+	grpc.ClientStream
+}
+
+type newPhotosUploadVideoToAlbumClient struct {
+	grpc.ClientStream
+}
+
+func (x *newPhotosUploadVideoToAlbumClient) Send(m *UploadVideoToAlbumRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *newPhotosUploadVideoToAlbumClient) CloseAndRecv() (*UploadVideoToAlbumResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(UploadVideoToAlbumResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *newPhotosClient) DeletePhotoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeletePhotoFromAlbumClient, error) {
-	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[8], "/main.NewPhotos/DeletePhotoFromAlbum", opts...)
+	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[9], "/main.NewPhotos/DeletePhotoFromAlbum", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -506,6 +543,49 @@ func (x *newPhotosDeletePhotoFromAlbumClient) CloseAndRecv() (*DeletePhotoFromAl
 	return m, nil
 }
 
+func (c *newPhotosClient) DeleteVideoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeleteVideoFromAlbumClient, error) {
+	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[10], "/main.NewPhotos/DeleteVideoFromAlbum", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &newPhotosDeleteVideoFromAlbumClient{stream}
+	return x, nil
+}
+
+type NewPhotos_DeleteVideoFromAlbumClient interface {
+	Send(*DeleteVideoFromAlbumRequest) error
+	CloseAndRecv() (*DeleteVideoFromAlbumResponse, error)
+	grpc.ClientStream
+}
+
+type newPhotosDeleteVideoFromAlbumClient struct {
+	grpc.ClientStream
+}
+
+func (x *newPhotosDeleteVideoFromAlbumClient) Send(m *DeleteVideoFromAlbumRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *newPhotosDeleteVideoFromAlbumClient) CloseAndRecv() (*DeleteVideoFromAlbumResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(DeleteVideoFromAlbumResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *newPhotosClient) GetAlbumInfo(ctx context.Context, in *GetAlbumInfoRequest, opts ...grpc.CallOption) (*GetAlbumInfoResponse, error) {
+	out := new(GetAlbumInfoResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetAlbumInfo", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *newPhotosClient) GetFullPhotoByThumbnail(ctx context.Context, in *GetFullPhotoByThumbnailRequest, opts ...grpc.CallOption) (*GetFullPhotoByThumbnailResponse, error) {
 	out := new(GetFullPhotoByThumbnailResponse)
 	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetFullPhotoByThumbnail", in, out, opts...)
@@ -532,7 +612,10 @@ type NewPhotosServer interface {
 	CreateAlbum(context.Context, *CreateAlbumRequest) (*CreateAlbumResponse, error)
 	DeleteAlbum(context.Context, *DeleteAlbumRequest) (*DeleteAlbumResponse, error)
 	UploadPhotoToAlbum(NewPhotos_UploadPhotoToAlbumServer) error
+	UploadVideoToAlbum(NewPhotos_UploadVideoToAlbumServer) error
 	DeletePhotoFromAlbum(NewPhotos_DeletePhotoFromAlbumServer) error
+	DeleteVideoFromAlbum(NewPhotos_DeleteVideoFromAlbumServer) error
+	GetAlbumInfo(context.Context, *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error)
 	GetFullPhotoByThumbnail(context.Context, *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error)
 	mustEmbedUnimplementedNewPhotosServer()
 }
@@ -580,8 +663,17 @@ func (UnimplementedNewPhotosServer) DeleteAlbum(context.Context, *DeleteAlbumReq
 func (UnimplementedNewPhotosServer) UploadPhotoToAlbum(NewPhotos_UploadPhotoToAlbumServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadPhotoToAlbum not implemented")
 }
+func (UnimplementedNewPhotosServer) UploadVideoToAlbum(NewPhotos_UploadVideoToAlbumServer) error {
+	return status.Errorf(codes.Unimplemented, "method UploadVideoToAlbum not implemented")
+}
 func (UnimplementedNewPhotosServer) DeletePhotoFromAlbum(NewPhotos_DeletePhotoFromAlbumServer) error {
 	return status.Errorf(codes.Unimplemented, "method DeletePhotoFromAlbum not implemented")
+}
+func (UnimplementedNewPhotosServer) DeleteVideoFromAlbum(NewPhotos_DeleteVideoFromAlbumServer) error {
+	return status.Errorf(codes.Unimplemented, "method DeleteVideoFromAlbum not implemented")
+}
+func (UnimplementedNewPhotosServer) GetAlbumInfo(context.Context, *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAlbumInfo not implemented")
 }
 func (UnimplementedNewPhotosServer) GetFullPhotoByThumbnail(context.Context, *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFullPhotoByThumbnail not implemented")
@@ -872,6 +964,32 @@ func (x *newPhotosUploadPhotoToAlbumServer) Recv() (*UploadPhotoToAlbumRequest, 
 	return m, nil
 }
 
+func _NewPhotos_UploadVideoToAlbum_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(NewPhotosServer).UploadVideoToAlbum(&newPhotosUploadVideoToAlbumServer{stream})
+}
+
+type NewPhotos_UploadVideoToAlbumServer interface {
+	SendAndClose(*UploadVideoToAlbumResponse) error
+	Recv() (*UploadVideoToAlbumRequest, error)
+	grpc.ServerStream
+}
+
+type newPhotosUploadVideoToAlbumServer struct {
+	grpc.ServerStream
+}
+
+func (x *newPhotosUploadVideoToAlbumServer) SendAndClose(m *UploadVideoToAlbumResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *newPhotosUploadVideoToAlbumServer) Recv() (*UploadVideoToAlbumRequest, error) {
+	m := new(UploadVideoToAlbumRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func _NewPhotos_DeletePhotoFromAlbum_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(NewPhotosServer).DeletePhotoFromAlbum(&newPhotosDeletePhotoFromAlbumServer{stream})
 }
@@ -896,6 +1014,50 @@ func (x *newPhotosDeletePhotoFromAlbumServer) Recv() (*DeletePhotoFromAlbumReque
 		return nil, err
 	}
 	return m, nil
+}
+
+func _NewPhotos_DeleteVideoFromAlbum_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(NewPhotosServer).DeleteVideoFromAlbum(&newPhotosDeleteVideoFromAlbumServer{stream})
+}
+
+type NewPhotos_DeleteVideoFromAlbumServer interface {
+	SendAndClose(*DeleteVideoFromAlbumResponse) error
+	Recv() (*DeleteVideoFromAlbumRequest, error)
+	grpc.ServerStream
+}
+
+type newPhotosDeleteVideoFromAlbumServer struct {
+	grpc.ServerStream
+}
+
+func (x *newPhotosDeleteVideoFromAlbumServer) SendAndClose(m *DeleteVideoFromAlbumResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *newPhotosDeleteVideoFromAlbumServer) Recv() (*DeleteVideoFromAlbumRequest, error) {
+	m := new(DeleteVideoFromAlbumRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _NewPhotos_GetAlbumInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAlbumInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).GetAlbumInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/GetAlbumInfo",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).GetAlbumInfo(ctx, req.(*GetAlbumInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _NewPhotos_GetFullPhotoByThumbnail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -944,6 +1106,10 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NewPhotos_DeleteAlbum_Handler,
 		},
 		{
+			MethodName: "GetAlbumInfo",
+			Handler:    _NewPhotos_GetAlbumInfo_Handler,
+		},
+		{
 			MethodName: "GetFullPhotoByThumbnail",
 			Handler:    _NewPhotos_GetFullPhotoByThumbnail_Handler,
 		},
@@ -990,8 +1156,18 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 		{
+			StreamName:    "UploadVideoToAlbum",
+			Handler:       _NewPhotos_UploadVideoToAlbum_Handler,
+			ClientStreams: true,
+		},
+		{
 			StreamName:    "DeletePhotoFromAlbum",
 			Handler:       _NewPhotos_DeletePhotoFromAlbum_Handler,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "DeleteVideoFromAlbum",
+			Handler:       _NewPhotos_DeleteVideoFromAlbum_Handler,
 			ClientStreams: true,
 		},
 	},
