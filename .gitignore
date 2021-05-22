@@ -6,3 +6,4 @@
 #Ignores credentials.sh file
 
 credentials.sh
+error.log
