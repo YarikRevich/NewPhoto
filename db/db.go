@@ -1,19 +1,19 @@
 package db
 
 import (
-	"NewPhoto/utils"
-
-	"database/sql"
 	"errors"
 	"fmt"
 	"math"
 	"os"
-	"strings"
 
 	"NewPhoto/log"
+	"NewPhoto/utils"
 
-	"github.com/go-sql-driver/mysql"
-	_ "github.com/go-sql-driver/mysql"
+	"database/sql"
+	"github.com/jmoiron/sqlx"
+	"github.com/lib/pq"
+
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -22,63 +22,31 @@ var (
 )
 
 type DB struct {
-	db *sql.DB
-}
-
-type IDB interface {
-	CreateDB()
-	CreateTables()
-	CloseDB()
-
-	LoginUser(login, pass string) (string, error)
-	RegisterUser(login, pass, firstname, secondname string) bool
-	IsLogin(uid string) bool
-
-	GetPhotos(userid string) [][5]interface{}
-	GetVideos(userid string) [][1]interface{}
-	UploadPhoto(userid string, photo, thumbnail []byte, extension string, size float64, tags string)
-	UploadVideo(userid, extension string, video []byte, size float64)
-
-	GetUserinfo(userid string) (string, string, float64)
-	GetUserAvatar(userid string) []byte
-	SetUserAvatar(userid string, avatar []byte)
-
-	GetAlbums(userid string) [][3]interface{}
-	GetPhotosFromAlbum(userid, name string) [][5]interface{}
-	GetVideosFromAlbum(userid, name string) [][2]interface{}
-	UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte)
-	UploadVideoToAlbum(userid, album, extension string, video []byte, size float64)
-	CreateAlbum(userid, name string) bool
-	DeleteAlbum(userid, name string) bool
-	DeletePhotoFromAlbum(userid, album string, photo []byte)
-	DeleteVideoFromAlbum(userid, album string, video []byte)
-	GetAlbumInfo(userid, album string) int64
-
-	GetFullPhotoByThumbnail(userid string, thumbnail []byte) []byte
+	db *sqlx.DB
 }
 
 func (d *DB) CreateDB() {
 
-	password, ok := os.LookupEnv("mysqlPassword")
+	password, ok := os.LookupEnv("dbPassword")
 	if !ok {
-		log.Logger.Fatalln("mysqlPassword is not written in credentials.sh file")
+		log.Logger.Fatalln("dbPassword is not written in credentials.sh file")
 	}
-	username, ok := os.LookupEnv("mysqlUsername")
+	username, ok := os.LookupEnv("dbUsername")
 	if !ok {
-		log.Logger.Fatalln("mysqlUsername is not written in credentials.sh file")
-	}
-
-	table, ok := os.LookupEnv("mysqlTable")
-	if !ok {
-		log.Logger.Fatalln("mysqlTable is not written in credentials.sh file")
+		log.Logger.Fatalln("dbUsername is not written in credentials.sh file")
 	}
 
-	addr, ok := os.LookupEnv("mysqlAddr")
+	dbDatabase, ok := os.LookupEnv("dbDatabase")
 	if !ok {
-		log.Logger.Fatalln("mysqlAddr is not written in credentials.sh file")
+		log.Logger.Fatalln("dbTable is not written in credentials.sh file")
 	}
 
-	db, err := sql.Open("mysql", fmt.Sprintf("%s:%s@tcp(%s)/%s", username, password, addr, table))
+	addr, ok := os.LookupEnv("dbAddr")
+	if !ok {
+		log.Logger.Fatalln("dbAddr is not written in credentials.sh file")
+	}
+
+	db, err := sqlx.Connect("postgres", fmt.Sprintf("user=%s dbname=%s host=%s password=%s sslmode=disable", username, dbDatabase, addr, password))
 	if err != nil {
 		log.Logger.Fatalln(err)
 	}
@@ -86,20 +54,23 @@ func (d *DB) CreateDB() {
 }
 
 func (d *DB) CreateTables() {
-
-	_, err := d.db.Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS users (userid VARCHAR(200) UNIQUE, firstname VARCHAR(200), secondname VARCHAR(200), storage DOUBLE DEFAULT %f, avatar MEDIUMBLOB)", DefaultCapacity))
+	_, err := d.db.Exec(fmt.Sprintf("CREATE TABLE IF NOT EXISTS users (userid text, firstname text, secondname text, storage float8 DEFAULT %f, avatar bytea, PRIMARY KEY(userid))", DefaultCapacity))
 	if err != nil {
 		log.Logger.Fatalln(err.Error())
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS photos (userid VARCHAR(200), photo MEDIUMBLOB, thumbnail MEDIUMBLOB, extension VARCHAR(10), size DOUBLE, album VARCHAR(200), tags VARCHAR(200))")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS token (userid text, token uuid, UNIQUE(token), FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.Fatalln(err.Error())
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid VARCHAR(200), video LONGBLOB, extension VARCHAR(10), size DOUBLE, album VARCHAR(200))")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS photos (userid text, photo bytea, thumbnail bytea, extension text, size float8, album text[], tags text[], FOREIGN KEY(userid) REFERENCES users(userid))")
 	if err != nil {
 		log.Logger.Fatalln(err.Error())
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS albums (userid VARCHAR(200), name VARCHAR(200))")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid text, video bytea, extension text, size float8, album text[], FOREIGN KEY(userid) REFERENCES users(userid))")
+	if err != nil {
+		log.Logger.Fatalln(err.Error())
+	}
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS albums (userid text, name text, FOREIGN KEY(userid) REFERENCES users(userid))")
 	if err != nil {
 		log.Logger.Fatalln(err.Error())
 	}
@@ -111,42 +82,54 @@ func (d *DB) CloseDB() {
 	}
 }
 
-func (d *DB) LoginUser(login, pass string) (string, error) {
-	passedEncodedCredentials := utils.EncodeLogin(login, pass)
-	rows, err := d.db.Query("SELECT userid FROM users")
+func (d *DB) Login(login, pass string) (string, error) {
+	c := string(utils.EncodeLogin(login, pass))
+	var userid string
+	tx, err := d.db.Begin()
 	if err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "LoginUser"}).Fatalln(err)
+		log.Logger.WithFields(logrus.Fields{"qt": "Login"}).Fatalln(err)
 	}
-	defer func() {
-		err := rows.Close()
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "LoginUser"}).Fatalln(err)
-		}
-	}()
-
-	for rows.Next() {
-		var userid string
-		if err := rows.Scan(&userid); err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "LoginUser"}).Fatalln(err)
-		}
-		if userid == string(passedEncodedCredentials) {
-			return string(passedEncodedCredentials), nil
+	if err := d.db.Get(&userid, "SELECT userid FROM users WHERE userid = $1", c); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "Login"}).Fatalln(err)
+	}
+	if len(userid) != 0 {
+		t := uuid.NewString()
+		if _, err := d.db.Exec("INSERT INTO token (userid, token) VALUES ($1, $2)", c, t); err != nil {
+			log.Logger.WithFields(logrus.Fields{"qt": "Login"}).Fatalln(err)
+			return c, nil
 		}
 	}
-	return "", errors.New("such user does not exist")
+	if err := tx.Commit(); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "Login"}).Fatalln(err)
+	}
+	return "", errors.New(LOGIN_ERROR)
 }
 
-func (d *DB) RegisterUser(login, pass, firstname, secondname string) bool {
-
-	_, err := d.db.Exec("INSERT INTO users (userid, firstname, secondname) VALUES (?, ?, ?)", utils.EncodeLogin(login, pass), firstname, secondname)
+func (d *DB) Logout(userid string) error {
+	tx, err := d.db.Begin()
 	if err != nil {
-		mysqlError := err.(*mysql.MySQLError)
-		if mysqlError.Number == 1062 {
-			return false
+		log.Logger.WithFields(logrus.Fields{"qt": "Logout"}).Fatalln(err)
+	}
+	if _, err := d.db.Exec("DELETE FROM token WHERE userid = $1", userid); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "Logout"}).Fatalln(err)
+	}
+	if err := tx.Commit(); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "Logout"}).Fatalln(err)
+	}
+	return nil
+}
+
+func (d *DB) RegisterUser(login, pass, firstname, secondname string) error {
+	_, err := d.db.Exec("INSERT INTO users (userid, firstname, secondname) VALUES ($1, $2, $3)", utils.EncodeLogin(login, pass), firstname, secondname)
+	if err != nil {
+		if pqerr, ok := err.(*pq.Error); ok {
+			if pqerr.Code == "23505" {
+				return errors.New(REGISTRAION_ERROR)
+			}
 		}
 		log.Logger.WithFields(logrus.Fields{"qt": "RegisterUser"}).Fatalln(err)
 	}
-	return true
+	return nil
 }
 
 func (d *DB) IsLogin(uid string) bool {
@@ -173,355 +156,170 @@ func (d *DB) IsLogin(uid string) bool {
 	return false
 }
 
-func (d *DB) GetPhotos(userid string) [][5]interface{} {
-	// Returns all the photos uploaded by user ...
-
-	rows, err := d.db.Query("SELECT * FROM photos WHERE userid = ?", userid)
-	if err != nil {
+func (d *DB) GetPhotos(userid string) []GetPhotosModel {
+	r := []GetPhotosModel{}
+	if err := d.db.Select(&r, "SELECT photo, thumbnail, extension, size, tags FROM photos WHERE userid = $1", userid); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetPhotos"}).Fatalln(err)
 	}
-	defer func() {
-		err := rows.Close()
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotos"}).Fatalln(err)
-		}
-	}()
-	model := struct {
-		Userid    string
-		Photo     []byte
-		Thumbnail []byte
-		Extension string
-		Size      float64
-		Album     sql.NullString
-		Tags      sql.NullString
-	}{}
-	var result [][5]interface{}
-	for rows.Next() {
-		if err := rows.Scan(&model.Userid, &model.Photo, &model.Thumbnail, &model.Extension, &model.Size, &model.Album, &model.Tags); err != nil{
-			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotos"}).Fatalln(err)
-		}
-		result = append(result, [5]interface{}{model.Photo, model.Thumbnail, model.Extension, model.Size, model.Tags.String})
-	}
-	return result
+	return r
 }
 
-func (d *DB) GetVideos(userid string) [][1]interface{} {
-	rows, err := d.db.Query("SELECT * FROM videos WHERE userid = ?", userid)
-	if err != nil {
+func (d *DB) GetVideos(userid string) []GetVideosModel {
+	r := []GetVideosModel{}
+	if err := d.db.Select(&r, "SELECT video FROM videos WHERE userid = $1", userid); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetVideos"}).Fatalln(err)
 	}
-	defer func() {
-		err := rows.Close()
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetVideos"}).Fatalln(err)
-		}
-	}()
-	model := struct {
-		Userid string
-		Video  []byte
-		Album  sql.NullString
-	}{}
-	var result [][1]interface{}
-	for rows.Next() {
-		if err := rows.Scan(&model.Userid, &model.Video, &model.Album); err != nil{
-			log.Logger.WithFields(logrus.Fields{"qt": "GetVideos"}).Fatalln(err)
-		}
-		result = append(result, [1]interface{}{&model.Video})
-	}
-	return result
+	return r
 }
 
-func (d *DB) UploadPhoto(userid string, photo, thumbnail []byte, extension string, size float64, tags string) {
-	_, err := d.db.Exec("INSERT INTO photos (userid, photo, thumbnail, extension, size, tags) VALUES (?, ?, ?, ?, ?, ?)", userid, photo, thumbnail, extension, size, tags)
-	if err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhoto"}).Fatalln(err)
-	}
+func (d *DB) UploadPhoto(userid string, photo, thumbnail []byte, extension string, size float64, tags []string) {
+	d.db.MustExec("INSERT INTO photos (userid, photo, thumbnail, extension, size, tags) VALUES ($1, $2, $3, $4, $5, $6)", userid, photo, thumbnail, extension, size, pq.Array(tags))
 }
 
 func (d *DB) UploadVideo(userid, extension string, video []byte, size float64) {
-	_, err := d.db.Exec("INSERT INTO videos (userid, video, extension, size) VALUES (?, ?, ?, ?)", userid, video, extension, size)
-	if err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideo"}).Fatalln(err)
-	}
+	d.db.MustExec("INSERT INTO videos (userid, video, extension, size) VALUES ($1, $2, $3, $4)", userid, video, extension, size)
 }
 
 func (d *DB) GetUserinfo(userid string) (string, string, float64) {
 	// Returns all the available storage for uploading by the passed user ...
 
-	row := d.db.QueryRow("SELECT storage FROM users WHERE userid = ?", userid)
 	var storage float64
-	err := row.Scan(&storage)
-	if err != nil {
+	if err := d.db.Select(&storage, "SELECT storage FROM users WHERE userid = $1", userid); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 	}
 
-	rows, err := d.db.Query("SELECT size FROM photos WHERE userid = ?", userid)
-	if err != nil {
+	var size float64
+	if err := d.db.Select(&size, "SELECT SUM(size) FROM photos WHERE userid = $1", userid); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 	}
-	defer func() {
-		err := rows.Close()
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
-		}
-	}()
 
-	var allphotossize float64
-	for rows.Next() {
-		var storage float64
-		if err := rows.Scan(&storage); err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
-		}
-		allphotossize += storage
+	var Userinfo struct {
+		firstname  string
+		secondname string
 	}
-
-	row = d.db.QueryRow("SELECT firstname, secondname FROM users WHERE userid = ?", userid)
-
-	var firstname string
-	var secondname string
-
-	if err := row.Scan(&firstname, &secondname); err != nil {
+	if err := d.db.Select(&Userinfo, "SELECT firstname, secondname FROM users WHERE userid = $1", userid); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
 	}
-	return firstname, secondname, storage - allphotossize
+
+	return Userinfo.firstname, Userinfo.secondname, storage - size
 }
 
 func (d *DB) GetUserAvatar(userid string) []byte {
-	row := d.db.QueryRow("SELECT avatar FROM users WHERE userid = ?", userid)
-
-	var avatar []byte
-
-	if err := row.Scan(&avatar); err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "GetUserinfo"}).Fatalln(err)
+	var avatar []interface{}
+	if err := d.db.Select(&avatar, "SELECT avatar FROM users WHERE userid = $1", userid); err != nil {
+		log.Logger.WithFields(logrus.Fields{"qt": "GetUserAvatar"}).Fatalln(err)
 	}
-	return avatar
+	switch x := avatar[0].(type) {
+	case []byte:
+		return []byte(x)
+	}
+	return []byte("")
 }
 
 func (d *DB) SetUserAvatar(userid string, avatar []byte) {
-	_, err := d.db.Exec("UPDATE users SET avatar = ? WHERE userid = ?", avatar, userid)
-	if err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "SetUserAvatar"}).Fatalln(err)
-	}
+	d.db.MustExec("UPDATE users SET avatar = $1 WHERE userid = $2", avatar, userid)
 }
 
-func (d *DB) GetAlbums(userid string) [][3]interface{} {
-	rows, err := d.db.Query("SELECT name FROM albums WHERE userid = ?", userid)
-	if err != nil {
+func AlbumInResult(w string, c []GetAlbumsModel) bool {
+	for _, v := range c {
+		if v.Album == w {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *DB) GetAlbums(userid string) []GetAlbumsModel {
+	var albums []string
+	if err := d.db.Select(&albums, "SELECT name FROM albums WHERE userid = $1", userid); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
 	}
 
-	defer func() {
-		err := rows.Close()
-		if err != nil {
+	r := []GetAlbumsModel{}
+	for _, v := range albums {
+		a := GetAlbumsModel{}
+		if err := d.db.Get(&a, "SELECT album, photo FROM photos WHERE userid = $1 AND $2=ANY(album) ORDER BY photo DESC LIMIT 1", userid, v); err != nil && err != sql.ErrNoRows {
 			log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
 		}
-	}()
-
-	var albums []string
-
-	for rows.Next() {
-		var album string
-		if err := rows.Scan(&album); err != nil{
-			log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
-		}
-		albums = append(albums, album)
+		a.Album = v
+		r = append(r, a)
 	}
-
-	var result [][3]interface{}
-	for _, album := range albums {
-		row := d.db.QueryRow("SELECT photo, thumbnail FROM photos WHERE userid = ? AND (album like ? OR album like ? OR album like ?) ORDER BY userid DESC LIMIT 1", userid, "%"+album+",%", "%,"+album+"%", "%,"+album+",%")
-		var photo []byte
-		var thumbnail []byte
-		if err := row.Scan(&photo, &thumbnail); err != nil && err != sql.ErrNoRows {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetAlbums"}).Fatalln(err)
-		}
-		result = append(result, [3]interface{}{album, photo, thumbnail})
-	}
-	return result
+	return r
 }
 
-func (d *DB) GetPhotosFromAlbum(userid, name string) [][5]interface{} {
-	rows, err := d.db.Query(`SELECT userid, photo, thumbnail, extension, size, album FROM photos WHERE userid = ? AND (album like ? OR album like ? OR album like ?)`, userid, "%"+name+",%", "%,"+name+"%", "%,"+name+",%")
-	if err != nil {
+func (d *DB) GetPhotosFromAlbum(userid, name string) []GetPhotosFromAlbumModel {
+	r := []GetPhotosFromAlbumModel{}
+	if err := d.db.Select(&r, `SELECT userid, photo, thumbnail, extension, size, album FROM photos WHERE userid = $1 AND $2=ANY(album)`, userid, name); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetPhotosFromAlbum"}).Fatalln(err)
 	}
-	defer func() {
-		err := rows.Close()
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotosFromAlbum"}).Fatalln(err)
-		}
-	}()
-	var model struct {
-		Userid    string
-		Photo     []byte
-		Thumbnail []byte
-		Extension string
-		Size      float64
-		Album     sql.NullString
-	}
-	var result [][5]interface{}
-	for rows.Next() {
-		err := rows.Scan(&model.Userid, &model.Photo, &model.Thumbnail, &model.Extension, &model.Size, &model.Album)
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetPhotosFromAlbum"}).Fatalln(err)
-		}
-		result = append(result, [5]interface{}{model.Photo, model.Thumbnail, model.Extension, model.Size, model.Album.String})
-	}
-	return result
+	return r
 }
 
-func (d *DB) GetVideosFromAlbum(userid, name string) [][2]interface{} {
-	rows, err := d.db.Query("SELECT * FROM videos WHERE userid = ? AND (album like ? OR album like ? OR album like ?)", userid, "%"+name+",%", "%,"+name+"%", "%,"+name+",%")
-	if err != nil {
+func (d *DB) GetVideosFromAlbum(userid, name string) []GetVideosFromAlbumModel {
+	r := []GetVideosFromAlbumModel{}
+	if err := d.db.Select(&r, "SELECT video, extension FROM videos WHERE userid = $1 AND $2=ANY(album)", userid, name); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetVideosFromAlbum"}).Fatalln(err)
 	}
-	defer func() {
-		err := rows.Close()
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetVideosFromAlbum"}).Fatalln(err)
-		}
-	}()
-	model := struct {
-		Userid    string
-		Video     []byte
-		Extension string
-		Size      float64
-		Album     sql.NullString
-	}{}
-	var result [][2]interface{}
-	for rows.Next() {
-		err := rows.Scan(&model.Userid, &model.Video, &model.Extension, &model.Size, &model.Album)
-		if err != nil {
-			log.Logger.WithFields(logrus.Fields{"qt": "GetVideosFromAlbum"}).Fatalln(err)
-		}
-		result = append(result, [2]interface{}{model.Video, model.Extension})
-	}
-	return result
+	return r
 }
 
 func (d *DB) UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte) {
 	_, err := d.db.Exec(
-		"INSERT INTO photos (userid, photo, thumbnail, extension, size, album) SELECT ?, ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT * FROM photos WHERE userid = ? AND photo = ?) ", userid, photo, thumbnail, extension, size, album+",", userid, photo)
+		"INSERT INTO photos (userid, photo, thumbnail, extension, size) (SELECT $1, $2, $3, $4, $5 WHERE NOT EXISTS (SELECT photo FROM photos WHERE userid = $1 AND photo = $2))", userid, photo, thumbnail, extension, size)
 	if err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhotoToAlbum"}).Fatalln(err)
 	}
-	row := d.db.QueryRow("SELECT album FROM photos WHERE userid = ? AND photo = ?", userid, photo)
-	var a sql.NullString
-	if err := row.Scan(&a); err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhotoToAlbum"}).Fatalln(err)
-	}
-
-	split := strings.Split(a.String, ",")
-	if len(split) == 2 && split[0] == album {
-		return
-	}
-
-	a.String = fmt.Sprintf("%s%s,", a.String, album)
-	if _, err := d.db.Exec("UPDATE photos SET album = ? WHERE userid = ? AND photo = ?", a.String, userid, photo); err != nil {
+	if _, err := d.db.Exec("UPDATE photos SET album = array_append(album, $1) WHERE userid = $2 AND photo = $3", album, userid, photo); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "UploadPhotoToAlbum"}).Fatalln(err)
 	}
 }
 
-func (d *DB) UploadVideoToAlbum(userid, album, extension string, video []byte, size float64) {
-	_, err := d.db.Exec(
-		"INSERT INTO videos (userid, video, extension, size, album) SELECT ?, ?, ?, ?, ? FROM DUAL WHERE NOT EXISTS (SELECT * FROM videos WHERE userid = ? AND video = ?) ", userid, video, extension, size, album+",", userid, video)
+func (d *DB) UploadVideoToAlbum(userid, extension, album string, video []byte, size float64) {
+	err := d.db.MustExec(
+		"INSERT INTO videos (userid, video, extension, size) (SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT video FROM videos WHERE userid = $1 AND video = $2))", userid, video, extension, size)
 	if err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideoToAlbum"}).Fatalln(err)
 	}
-
-	row := d.db.QueryRow("SELECT album FROM videos WHERE userid = ? AND video = ?", userid, video)
-	var a sql.NullString
-	if err := row.Scan(&a); err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideoToAlbum"}).Fatalln(err)
-	}
-	split := strings.Split(a.String, ",")
-	if len(split) == 2 && split[0] == album {
-		return
-	}
-
-	a.String = fmt.Sprintf("%s%s,", a.String, album)
-	if _, err := d.db.Exec("UPDATE videos SET album = ? WHERE userid = ? AND video = ?", a.String, userid, video); err != nil {
+	if err := d.db.MustExec("UPDATE videos SET album = array_append(album, $1) WHERE userid = $2 AND video = $3", album, userid, video); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "UploadVideoToAlbum"}).Fatalln(err)
 	}
 }
 
 func (d *DB) CreateAlbum(userid, name string) bool {
-	_, err := d.db.Exec("INSERT IGNORE INTO albums (userid, name) VALUES(?, ?)", userid, name)
-	if err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "CreateAlbum"}).Fatalln(err)
-	}
+	d.db.MustExec("INSERT INTO albums (userid, name) (SELECT $1, $2 WHERE NOT EXISTS (SELECT * FROM albums WHERE userid = $1 AND name = $2))", userid, name)
 	return true
 }
 
-func (d *DB) DeleteAlbum(userid, name string) bool {
-	_, err := d.db.Exec("DELETE FROM albums WHERE userid = ? AND name = ?", userid, name)
-	if err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "DeleteAlbum"}).Fatalln(err)
-	}
+func (d *DB) DeleteAlbum(userid, album string) bool {
+	d.db.MustExec("DELETE FROM albums WHERE userid = $1 AND name = $2", userid, album)
+	d.db.MustExec("UPDATE photos videos set album = array_remove(album, $1) WHERE userid = $2", album, userid)
 	return true
 }
 
 func (d *DB) DeletePhotoFromAlbum(userid, album string, photo []byte) {
-	row := d.db.QueryRow("SELECT album FROM photos WHERE userid = ? AND photo = ?", userid, photo)
-	var a string
-	if err := row.Scan(&a); err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "DeletePhotoFromAlbum"}).Fatalln(err)
-	}
-	split := strings.Split(a, ",")
-	for i, v := range split {
-		if v == album {
-			if len(split) == 2 && len(split[1]) == 0 {
-				a = ""
-			} else {
-				a = strings.Join(append(split[i:], split[i+1:]...), ",")
-			}
-			break
-		}
-	}
-
-	if _, err := d.db.Exec("UPDATE photos SET album = ? WHERE userid = ? AND photo = ?", a, userid, photo); err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "DeletePhotoFromAlbum"}).Fatalln(err)
-	}
+	d.db.MustExec("UPDATE photos SET album = array_remove(album, $1) WHERE userid = $2, AND photo = $3", album, userid, photo)
 }
 
 func (d *DB) DeleteVideoFromAlbum(userid, album string, video []byte) {
-	row := d.db.QueryRow("SELECT album FROM videos WHERE userid = ? AND video = ?", userid, video)
-	var a string
-	if err := row.Scan(&a); err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "DeleteVideoFromAlbum"}).Fatalln(err)
-	}
-	split := strings.Split(a, ",")
-	for i, v := range split {
-		if v == album {
-			a = strings.Join(append(split[i:], split[i+1:]...), ",")
-			break
-		}
-	}
-
-	if _, err := d.db.Exec("UPDATE videos SET album = ? WHERE userid = ? AND video = ?", a, userid, video); err != nil {
-		log.Logger.WithFields(logrus.Fields{"qt": "DeleteVideoFromAlbum"}).Fatalln(err)
-	}
+	d.db.MustExec("UPDATE videos SET album = array_remove(album, $1) WHERE userid = $2, AND video = $3", album, userid, video)
 }
 
 func (d *DB) GetAlbumInfo(userid, album string) int64 {
-	row := d.db.QueryRow("SELECT COUNT(*) FROM photos as p WHERE p.userid = ? AND (p.album like ? OR p.album like ? OR p.album like ?)", userid, "%"+album+",%", "%,"+album+"%", "%,"+album+",%")
-	var mediaNumPhotos int64
-	if err := row.Scan(&mediaNumPhotos); err != nil {
+	var mediaNumPhotos []interface{}
+	if err := d.db.Select(&mediaNumPhotos, "SELECT COUNT(*) FROM photos WHERE userid = $1 AND $2=ANY(album)", userid, album); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetAlbumInfo"}).Fatalln(err)
 	}
 
-	row = d.db.QueryRow("SELECT COUNT(*) FROM videos as v WHERE v.userid = ? AND (v.album like ? OR v.album like ? OR v.album like ?)", userid, "%"+album+",%", "%,"+album+"%", "%,"+album+",%")
-	var mediaNumVideos int64
-	if err := row.Scan(&mediaNumVideos); err != nil {
+	var mediaNumVideos []interface{}
+	if err := d.db.Select(&mediaNumVideos, "SELECT COUNT(*) FROM videos WHERE userid = $1 AND $2=ANY(album)", userid, album); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetAlbumInfo"}).Fatalln(err)
 	}
-	return mediaNumPhotos + mediaNumVideos
+	return mediaNumPhotos[0].(int64) + mediaNumVideos[0].(int64)
 }
 
 func (d *DB) GetFullPhotoByThumbnail(userid string, thumbnail []byte) []byte {
-	row := d.db.QueryRow("SELECT photo FROM photos WHERE userid = ? AND thumbnail = ?", userid, thumbnail)
 	var photo []byte
-	if err := row.Scan(&photo); err != nil {
+	if err := d.db.Get(&photo, "SELECT photo FROM photos WHERE userid = $1 AND thumbnail = $2", userid, thumbnail); err != nil {
 		log.Logger.WithFields(logrus.Fields{"qt": "GetFullPhotoByThumbnail"}).Fatalln(err)
 	}
 	return photo

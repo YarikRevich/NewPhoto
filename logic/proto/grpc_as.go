@@ -10,7 +10,7 @@ type Authentication struct {
 }
 
 func (a *Authentication) LoginUser(ctx context.Context, r *UserLoginRequest) (*UserLoginResponse, error) {
-	userid, err := a.DBInstanse.LoginUser(r.GetLogin(), r.GetPassword())
+	userid, err := a.DBInstanse.Login(r.GetLogin(), r.GetPassword())
 	var ok bool = true
 	if err != nil {
 		ok = false
@@ -19,8 +19,11 @@ func (a *Authentication) LoginUser(ctx context.Context, r *UserLoginRequest) (*U
 }
 
 func (a *Authentication) RegisterUser(ctx context.Context, r *UserRegisterRequest) (*UserRegisterResponse, error) {
-	ok := a.DBInstanse.RegisterUser(r.GetLogin(), r.GetPassword(), r.GetFirstname(), r.GetSecondname())
-	return &UserRegisterResponse{Ok: ok}, nil
+	err := a.DBInstanse.RegisterUser(r.GetLogin(), r.GetPassword(), r.GetFirstname(), r.GetSecondname())
+	if err != nil {
+		return &UserRegisterResponse{Ok: false}, nil
+	}
+	return &UserRegisterResponse{Ok: true}, nil
 }
 
 func (a *Authentication) mustEmbedUnimplementedAuthenticationServer() {}

@@ -39,15 +39,13 @@ func (s *NewPhoto) GetPhotos(r *GetPhotosRequest, stream NewPhotos_GetPhotosServ
 
 		var model []caching.GetPhotosModel
 		for _, value := range result {
-			model = append(model, caching.GetPhotosModel{Photo: value[0].([]byte), Thumbnail: value[1].([]byte), Extension: value[2].(string), Size: value[3].(float64), Tags: value[4].(string)})
-		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_PHOTOS, conf.Configure(model))
-		for _, value := range result {
-			if err := stream.Send(&GetPhotosResponse{Photo: value[0].([]byte), Thumbnail: value[1].([]byte), Extension: value[2].(string), Size: value[3].(float64), Tags: value[4].(string), Ok: true}); err != nil {
+			model = append(model, caching.GetPhotosModel{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Tags: value.Tags.String})
+			if err := stream.Send(&GetPhotosResponse{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Tags: value.Tags.String, Ok: true}); err != nil {
 				continue
 			}
 		}
+		conf := caching.NewConfigurator()
+		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_PHOTOS, conf.Configure(model))
 		return nil
 	}
 }
@@ -79,15 +77,14 @@ func (s *NewPhoto) GetVideos(r *GetVideosRequest, stream NewPhotos_GetVideosServ
 
 		var model []caching.GetVideosModel
 		for _, value := range result {
-			model = append(model, caching.GetVideosModel{Video: value[0].([]byte)})
-		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_VIDEOS, conf.Configure(model))
-		for _, value := range result {
-			if err := stream.Send(&GetVideosResponse{Video: value[0].([]byte), Ok: true}); err != nil {
+			model = append(model, caching.GetVideosModel{Video: value.Video})
+			if err := stream.Send(&GetVideosResponse{Video: value.Video, Ok: true}); err != nil {
 				continue
 			}
 		}
+		conf := caching.NewConfigurator()
+		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_VIDEOS, conf.Configure(model))
+
 		return nil
 	}
 }
@@ -106,7 +103,7 @@ func (s *NewPhoto) UploadPhoto(stream NewPhotos_UploadPhotoServer) error {
 			// if err != nil {
 			// 	log.Logger.Fatalln(err)
 			// }
-			s.DBInstanse.UploadPhoto(msg.GetUserid(), msg.GetPhoto(), msg.GetThumbnail(), msg.GetExtension(), msg.GetSize(), "")
+			s.DBInstanse.UploadPhoto(msg.GetUserid(), msg.GetPhoto(), msg.GetThumbnail(), msg.GetExtension(), msg.GetSize(), []string{})
 		}
 		if err := stream.SendAndClose(&UploadPhotoResponse{Ok: true}); err != nil {
 			log.Logger.Fatalln(err)
@@ -177,16 +174,14 @@ func (s *NewPhoto) GetPhotosFromAlbum(r *GetPhotosFromAlbumRequest, stream NewPh
 		result := s.DBInstanse.GetPhotosFromAlbum(r.GetUserid(), r.GetName())
 		var model []caching.GetPhotosFromAlbum
 		for _, value := range result {
-			model = append(model, caching.GetPhotosFromAlbum{Photo: value[0].([]byte), Thumbnail: value[1].([]byte), Extension: value[2].(string), Size: value[3].(float64), Album: value[4].(string)})
-		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_PHOTOS_FROM_ALBUM, conf.Configure(model))
-		for _, value := range result {
-			if err := stream.Send(&GetPhotosFromAlbumResponse{Photo: value[0].([]byte), Thumbnail: value[1].([]byte), Extension: value[2].(string), Size: value[3].(float64), Album: value[4].(string), Ok: true}); err != nil {
+			model = append(model, caching.GetPhotosFromAlbum{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Album: value.Album.String})
+			if err := stream.Send(&GetPhotosFromAlbumResponse{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Album: value.Album.String, Ok: true}); err != nil {
 				log.Logger.Fatalln(err)
 				continue
 			}
 		}
+		conf := caching.NewConfigurator()
+		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_PHOTOS_FROM_ALBUM, conf.Configure(model))
 		return nil
 	}
 }
@@ -200,15 +195,14 @@ func (s *NewPhoto) GetVideosFromAlbum(r *GetVideosFromAlbumRequest, stream NewPh
 
 		var model []caching.GetVideosFromAlbum
 		for _, value := range result {
-			model = append(model, caching.GetVideosFromAlbum{Video: value[0].([]byte), Extension: value[1].(string)})
-		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_VIDEOS_FROM_ALBUM, conf.Configure(model))
-		for _, value := range result {
-			if err := stream.Send(&GetVideosFromAlbumResponse{Video: value[0].([]byte), Extension: value[1].(string), Ok: true}); err != nil {
+			model = append(model, caching.GetVideosFromAlbum{Video: value.Video, Extension: value.Extension})
+			if err := stream.Send(&GetVideosFromAlbumResponse{Video: value.Video, Extension: value.Extension, Ok: true}); err != nil {
 				continue
 			}
 		}
+		conf := caching.NewConfigurator()
+		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_VIDEOS_FROM_ALBUM, conf.Configure(model))
+
 		return nil
 	}
 }
@@ -242,7 +236,7 @@ func (s *NewPhoto) UploadVideoToAlbum(stream NewPhotos_UploadVideoToAlbumServer)
 			if err != nil {
 				break
 			}
-			s.DBInstanse.UploadVideoToAlbum(recv.GetUserid(), recv.GetAlbum(), recv.GetExtension(), recv.GetVideo(), recv.GetSize())
+			s.DBInstanse.UploadVideoToAlbum(recv.GetUserid(), recv.GetExtension(), recv.GetAlbum(), recv.GetVideo(), recv.GetSize())
 		}
 		if err := stream.SendAndClose(&UploadVideoToAlbumResponse{Ok: true}); err != nil {
 			log.Logger.Fatalln(err)
@@ -259,17 +253,15 @@ func (s *NewPhoto) GetAlbums(r *GetAlbumsRequest, stream NewPhotos_GetAlbumsServ
 		result := s.DBInstanse.GetAlbums(r.GetUserid())
 
 		var model []caching.GetAlbumsModel
-		for _, value := range result {
-			model = append(model, caching.GetAlbumsModel{Name: value[0].(string), LatestPhoto: value[1].([]byte), LatestPhotoThumbnail: value[2].([]byte)})
-		}
 
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_ALBUMS, conf.Configure(model))
 		for _, value := range result {
-			if err := stream.Send(&GetAlbumsResponse{Name: value[0].(string), LatestPhoto: value[1].([]byte), LatestPhotoThumbnail: value[2].([]byte), Ok: true}); err != nil {
+			model = append(model, caching.GetAlbumsModel{Name: value.Album, LatestPhoto: value.Photo})
+			if err := stream.Send(&GetAlbumsResponse{Name: value.Album, LatestPhoto: value.Photo, Ok: true}); err != nil {
 				continue
 			}
 		}
+		conf := caching.NewConfigurator()
+		caching.RedisInstanse.Set(r.GetUserid(), caching.GET_ALBUMS, conf.Configure(model))
 		return nil
 	}
 }

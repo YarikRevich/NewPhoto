@@ -85,3 +85,36 @@ time="2021-05-22T20:50:00+03:00" level=fatal msg="sql: no rows in result set" qt
 time="2021-05-22T20:51:45+03:00" level=fatal msg="sql: no rows in result set" qt=DeleteVideoFromAlbum
 time="2021-05-22T22:50:12+03:00" level=fatal msg="rpc error: code = Unavailable desc = transport is closing"
 time="2021-05-22T22:50:12+03:00" level=fatal msg="rpc error: code = Unavailable desc = transport is closing"
+time="2021-05-23T13:19:17+03:00" level=fatal msg="Error 1064: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '% OR album like % OR album like %)' at line 1" qt=DeleteAlbum
+time="2021-05-26T07:48:09+03:00" level=fatal msg="dbPassword is not written in credentials.sh file"
+time="2021-05-26T07:49:00+03:00" level=fatal msg="dbPassword is not written in credentials.sh file"
+time="2021-05-26T07:49:15+03:00" level=fatal msg="sql: unknown driver \"postgres\" (forgotten import?)"
+time="2021-05-26T07:50:50+03:00" level=fatal msg="pq: SSL is not enabled on the server"
+time="2021-05-26T07:51:16+03:00" level=fatal msg="pq: SSL is not enabled on the server"
+time="2021-05-26T07:51:36+03:00" level=fatal msg="pq: type \"double\" does not exist"
+time="2021-05-26T09:15:03+03:00" level=fatal msg="listen tcp :8082: bind: address already in use"
+time="2021-05-26T09:20:24+03:00" level=fatal msg="redisAddr is not written in credentials.sh file"
+time="2021-05-26T09:20:35+03:00" level=fatal msg="listen tcp :8082: bind: address already in use"
+time="2021-05-26T13:07:34+03:00" level=fatal msg="listen tcp :8082: bind: address already in use"
+time="2021-05-26T13:09:22+03:00" level=fatal msg="pq: syntax error at or near \",\"" qt=RegisterUser
+time="2021-05-26T13:27:32+03:00" level=fatal msg="listen tcp :8082: bind: address already in use"
+time="2021-05-26T13:38:14+03:00" level=fatal msg="sql: no rows in result set" qt=LoginUser
+time="2021-05-26T13:39:17+03:00" level=fatal msg="pq: syntax error at end of input" qt=GetUserinfo
+time="2021-05-26T13:45:56+03:00" level=fatal msg="sql: Scan error on column index 0, name \"avatar\": converting NULL to uint8 is unsupported" qt=GetUserinfo
+time="2021-05-26T13:53:43+03:00" level=fatal msg="expected slice but got struct" qt=GetUserAvatar
+time="2021-05-26T13:58:09+03:00" level=fatal msg="expected slice but got interface" qt=GetUserAvatar
+time="2021-05-26T14:09:27+03:00" level=fatal msg="sql: no rows in result set" qt=LoginUser
+time="2021-05-26T15:12:13+03:00" level=fatal msg="sql: converting argument $1 type: unsupported type []string, a slice of string" qt=GetAlbums
+time="2021-05-26T15:35:43+03:00" level=fatal msg="pq: syntax error at or near \")\"" qt=GetVideosFromAlbum
+time="2021-05-26T15:37:22+03:00" level=fatal msg="expected slice but got int64" qt=GetAlbumInfo
+time="2021-05-26T16:06:53+03:00" level=fatal msg="{0xc000378000 1}" qt=UploadPhotoToAlbum
+time="2021-05-26T16:11:06+03:00" level=fatal msg="{0xc0000c2000 1}" qt=UploadPhotoToAlbum
+time="2021-05-26T16:13:25+03:00" level=fatal msg="sql: no rows in result set" qt=LoginUser
+time="2021-05-26T16:14:04+03:00" level=fatal msg="{0xc000408000 1}" qt=UploadPhotoToAlbum
+time="2021-05-26T16:15:19+03:00" level=fatal msg="{0xc000282000 0}" qt=UploadPhotoToAlbum
+time="2021-05-26T16:18:46+03:00" level=fatal msg="{0xc000166000 0}" qt=UploadPhotoToAlbum
+time="2021-05-26T17:12:59+03:00" level=fatal msg="{0xc0001d2bd0 1}" qt=UploadPhotoToAlbum
+time="2021-05-26T17:14:25+03:00" level=fatal msg="{0xc00013ebd0 1}" qt=UploadPhotoToAlbum
+time="2021-05-26T17:43:36+03:00" level=fatal msg="rpc error: code = Unavailable desc = transport is closing"
+time="2021-05-26T18:08:51+03:00" level=fatal msg="sql: no rows in result set" qt=GetAlbums
+time="2021-05-26T20:44:45+03:00" level=fatal msg="pq: syntax error at or near \"(\""
