@@ -1,4 +1,4 @@
-_**Commit:2**_
+_**Commit:2**_ 
 ```
 - Fixed problems with the process of caching
 - Added the system of processing and parsing cached data
