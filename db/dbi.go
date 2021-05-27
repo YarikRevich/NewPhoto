@@ -7,10 +7,21 @@ type Service interface {
 }
 
 type Auth interface {
-	Login(login, pass string) (string, error)
+	//Checks if user's cred are ok and then
+	//Returns his tokens
+	Login(login, pass string) (string, string, error)
+	
+	//Logouts user and then removes tokens
 	Logout(userid string) error
+
+	//Gets accessToken and loginToken. Then checks them
+	//If it is ok it returns ok status and new tokens
+	RetrieveToken(accessToken, loginToken string) (string, string, bool)
+
+	//Gets userID using accessToken and loginToken
+	GetUserID(accessToken, loginToken string)string
+
 	RegisterUser(login, pass, firstname, secondname string) error
-	IsLogin(uid string) bool
 }
 
 type Home interface {

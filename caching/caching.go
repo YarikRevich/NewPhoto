@@ -23,17 +23,17 @@ type Redis struct {
 func (r *Redis) Connect() {
 	addr, ok := os.LookupEnv("redisAddr")
 	if !ok {
-		log.Logger.Fatalln("redisAddr is not written in credentials.sh file")
+		log.Logger.UsingErrorLogFile().CFatalln("ChacheInit", "redisAddr is not written in credentials.sh file")
 	}
 
 	password, ok := os.LookupEnv("redisPassword")
 	if !ok {
-		log.Logger.Fatalln("redisPassword is not written in credentials.sh file")
+		log.Logger.UsingErrorLogFile().CFatalln("ChacheInit", "redisPassword is not written in credentials.sh file")
 	}
 
 	username, ok := os.LookupEnv("redisUsername")
 	if !ok {
-		log.Logger.Fatalln("redisUsername is not written in credentials.sh file")
+		log.Logger.UsingErrorLogFile().CFatalln("ChacheInit", "redisUsername is not written in credentials.sh file")
 	}
 
 	r.db = redis.NewClient(&redis.Options{
@@ -43,20 +43,20 @@ func (r *Redis) Connect() {
 		Username: username,
 	})
 	if err := r.db.Ping(ctx).Err(); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("ChacheInit", err)
 	}
 }
 
 func (r *Redis) Set(key, rc, args string) {
 	if err := r.db.HSet(ctx, key, []string{"commands", rc}).Err(); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("ChacheSet", err)
 	}
 	if err := r.db.HSet(ctx, key, []string{"args", args}).Err(); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("ChacheSet", err)
 	}
 	expr := time.Now().Add(time.Second * 10).Format("2006-01-02 15:04:05-07:00")
 	if err := r.db.HSet(ctx, key, []string{"expr", expr}).Err(); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("ChacheSet", err)
 	}
 }
 
@@ -80,7 +80,7 @@ func (r *Redis) IsCached(key, expectedcommand string) (string, bool) {
 	command, args, expr := r.Get(key)
 	ttl, err := time.Parse("2006-01-02 15:04:05-07:00", expr)
 	if err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("IsCached", err)
 	}
 
 	if len(command) != 0 && (command == expectedcommand && !math.Signbit(time.Until(ttl).Minutes())) {

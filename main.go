@@ -1,10 +1,9 @@
 package main
 
-import(
+import (
 	"NewPhoto/logic/server"
-	
 )
 
-func main(){
+func main() {
 	server.Run()
 }

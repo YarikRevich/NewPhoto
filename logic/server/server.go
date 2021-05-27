@@ -1,16 +1,17 @@
 package server
 
 import (
+	"NewPhoto/log"
 	"NewPhoto/logic/proto"
-	
+
 	"net"
 	"os"
 
-	"NewPhoto/log"
 	"google.golang.org/grpc"
 )
 
 func Run() {
+	log.Logger.UsingAccessLogFile()
 	opts := []grpc.ServerOption{
 		grpc.MaxRecvMsgSize(50 * 10e6),
 		grpc.MaxSendMsgSize(50 * 10e6),
@@ -24,14 +25,14 @@ func Run() {
 
 	runAddr, ok := os.LookupEnv("runAddr")
 	if !ok {
-		log.Logger.Fatalln("runAddr is not written in credentials.sh file")
+		log.Logger.UsingErrorLogFile().CFatalln("ServerRun", "runAddr is not written in credentials.sh file")
 	}
 
 	l, err := net.Listen("tcp", runAddr)
 	if err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("ServerRun", err)
 	}
 	if err := s.Serve(l); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("ServerRun", err)
 	}
 }

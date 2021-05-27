@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthenticationClient interface {
 	RegisterUser(ctx context.Context, in *UserRegisterRequest, opts ...grpc.CallOption) (*UserRegisterResponse, error)
 	LoginUser(ctx context.Context, in *UserLoginRequest, opts ...grpc.CallOption) (*UserLoginResponse, error)
+	RetrieveToken(ctx context.Context, in *RetrieveTokenRequest, opts ...grpc.CallOption) (*RetrieveTokenResponse, error)
 }
 
 type authenticationClient struct {
@@ -48,12 +49,22 @@ func (c *authenticationClient) LoginUser(ctx context.Context, in *UserLoginReque
 	return out, nil
 }
 
+func (c *authenticationClient) RetrieveToken(ctx context.Context, in *RetrieveTokenRequest, opts ...grpc.CallOption) (*RetrieveTokenResponse, error) {
+	out := new(RetrieveTokenResponse)
+	err := c.cc.Invoke(ctx, "/main.Authentication/RetrieveToken", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthenticationServer is the server API for Authentication service.
 // All implementations must embed UnimplementedAuthenticationServer
 // for forward compatibility
 type AuthenticationServer interface {
 	RegisterUser(context.Context, *UserRegisterRequest) (*UserRegisterResponse, error)
 	LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error)
+	RetrieveToken(context.Context, *RetrieveTokenRequest) (*RetrieveTokenResponse, error)
 	mustEmbedUnimplementedAuthenticationServer()
 }
 
@@ -66,6 +77,9 @@ func (UnimplementedAuthenticationServer) RegisterUser(context.Context, *UserRegi
 }
 func (UnimplementedAuthenticationServer) LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginUser not implemented")
+}
+func (UnimplementedAuthenticationServer) RetrieveToken(context.Context, *RetrieveTokenRequest) (*RetrieveTokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RetrieveToken not implemented")
 }
 func (UnimplementedAuthenticationServer) mustEmbedUnimplementedAuthenticationServer() {}
 
@@ -116,6 +130,24 @@ func _Authentication_LoginUser_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Authentication_RetrieveToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RetrieveTokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServer).RetrieveToken(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.Authentication/RetrieveToken",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServer).RetrieveToken(ctx, req.(*RetrieveTokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Authentication_ServiceDesc is the grpc.ServiceDesc for Authentication service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -130,6 +162,10 @@ var Authentication_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginUser",
 			Handler:    _Authentication_LoginUser_Handler,
+		},
+		{
+			MethodName: "RetrieveToken",
+			Handler:    _Authentication_RetrieveToken_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -86,7 +86,7 @@ func (d *D) Define(c string, args string) (interface{}, error) {
 		stat = new(GetFullPhotoByThumbnail)
 	}
 	if err := json.Unmarshal([]byte(args), &stat); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("CacheDefine", err)
 	}
 	var err error
 	if _, ok := stat.(int); ok {
@@ -108,7 +108,7 @@ type DC struct{}
 func (dc *DC) Configure(data interface{}) string {
 	result, err := json.Marshal(data)
 	if err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("CacheConfigure", err)
 	}
 	return string(result)
 }

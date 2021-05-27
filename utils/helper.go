@@ -10,7 +10,7 @@ func DecodeLogin(userid string) []byte {
 
 	dst := make([]byte, hex.DecodedLen(len(userid)))
 	if _, err := hex.Decode(dst, []byte(userid)); err != nil {
-		log.Logger.Fatalln(err)
+		log.Logger.UsingErrorLogFile().CFatalln("DecodeLogin", err)
 	}
 	return dst
 }

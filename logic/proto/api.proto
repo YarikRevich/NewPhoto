@@ -8,6 +8,7 @@ option go_package = "logic/proto";
 service Authentication {
     rpc RegisterUser(UserRegisterRequest) returns (UserRegisterResponse);
     rpc LoginUser(UserLoginRequest) returns (UserLoginResponse);
+    rpc RetrieveToken(RetrieveTokenRequest) returns (RetrieveTokenResponse);
 } 
 
 message UserRegisterRequest{
@@ -27,9 +28,22 @@ message UserLoginRequest{
 }
 
 message UserLoginResponse{
-    string userid = 1;
-    bool ok = 2;
+    string access_token = 1;
+    string login_token = 2;
+    bool ok = 3;
 }
+
+message RetrieveTokenRequest{
+    string access_token = 1;
+    string login_token = 2;
+}
+
+message RetrieveTokenResponse { 
+    bool ok = 1;
+    string access_token = 2;
+    string login_token = 3;
+}
+
 
 service NewPhotos {
   
@@ -82,7 +96,8 @@ service NewPhotos {
 // ####################    Main funcs' messages
 
 message GetPhotosRequest {
-    string userid = 1;
+    string access_token = 1;
+    string login_token = 2;
 }
 
 message GetPhotosResponse {
@@ -95,7 +110,8 @@ message GetPhotosResponse {
 }
 
 message GetVideosRequest {
-    string userid = 1;
+    string access_token = 1;
+    string login_token = 2;
 }
 
 message GetVideosResponse {
@@ -105,11 +121,12 @@ message GetVideosResponse {
 
 
 message UploadPhotoRequest {
-    string userid = 1;
-    bytes photo = 2;
-    bytes thumbnail = 3;
-    string extension = 4;
-    double size = 5;
+    string access_token = 1;
+    string login_token = 2;
+    bytes photo = 3;
+    bytes thumbnail = 4;
+    string extension = 5;
+    double size = 6;
 }
 
 message UploadPhotoResponse {
@@ -117,10 +134,11 @@ message UploadPhotoResponse {
 }
 
 message UploadVideoRequest {
-    string userid = 1;
-    bytes video = 2;
-    string extension = 3;
-    double size = 4;
+    string access_token = 1;
+    string login_token = 2;
+    bytes video = 3;
+    string extension = 4;
+    double size = 5;
 }
 
 message UploadVideoResponse {
@@ -130,7 +148,8 @@ message UploadVideoResponse {
 //#####################    Account funcs' messages   
 
 message GetUserinfoRequest {
-    string userid = 1;
+    string access_token = 1;
+    string login_token = 2;
 }
 
 message GetUserinfoResponse {
@@ -141,7 +160,8 @@ message GetUserinfoResponse {
 }
 
 message GetUserAvatarRequest{
-    string userid = 1;
+    string access_token = 1;
+    string login_token = 2;
 }
 
 message GetUserAvatarResponse{
@@ -150,19 +170,21 @@ message GetUserAvatarResponse{
 }
 
 message SetUserAvatarRequest {
-    string userid = 1;
-    bytes avatar = 2;
+    string access_token = 1;
+    string login_token = 2;
+    bytes avatar = 3;
 }
 
 message SetUserAvatarResponse {
     bool ok = 1;
-}
+} 
 
 //#####################    Album funcs' messages
 
 message GetPhotosFromAlbumRequest{
-    string userid = 1;
-    string name = 2; 
+    string access_token = 1;
+    string login_token = 2;
+    string name = 3; 
 }
 
 message GetPhotosFromAlbumResponse{
@@ -175,8 +197,9 @@ message GetPhotosFromAlbumResponse{
 }
 
 message GetVideosFromAlbumRequest{
-    string userid = 1;
-    string name = 2; 
+    string access_token = 1;
+    string login_token = 2;
+    string name = 3; 
 }
 
 message GetVideosFromAlbumResponse{
@@ -186,7 +209,8 @@ message GetVideosFromAlbumResponse{
 }
 
 message GetAlbumsRequest{
-    string userid = 1;
+    string access_token = 1;
+    string login_token = 2;
 }
 
 message GetAlbumsResponse{
@@ -197,8 +221,9 @@ message GetAlbumsResponse{
 }
 
 message CreateAlbumRequest {
-    string userid = 1;
-    string name = 2;
+    string access_token = 1;
+    string login_token = 2;
+    string name = 3;
 }
 
 message CreateAlbumResponse {
@@ -206,8 +231,9 @@ message CreateAlbumResponse {
 }
 
 message DeleteAlbumRequest{
-    string userid = 1;
-    string name = 2;
+    string access_token = 1;
+    string login_token = 2;
+    string name = 3;
 }
 
 message DeleteAlbumResponse{
@@ -215,12 +241,13 @@ message DeleteAlbumResponse{
 }
 
 message UploadPhotoToAlbumRequest{
-    string userid = 1;
-    bytes photo = 2;
-    bytes thumbnail = 3;
-    string extension = 4;
-    double size = 5;
-    string album = 6;
+    string access_token = 1;
+    string login_token = 2;
+    bytes photo = 3;
+    bytes thumbnail = 4;
+    string extension = 5;
+    double size = 6;
+    string album = 7;
 }
 
 message UploadPhotoToAlbumResponse{
@@ -228,11 +255,12 @@ message UploadPhotoToAlbumResponse{
 }
 
 message UploadVideoToAlbumRequest{
-    string userid = 1;
-    bytes video = 2;
-    string extension = 3;
-    double size = 4;
-    string album = 5;
+    string access_token = 1;
+    string login_token = 2;
+    bytes video = 3;
+    string extension = 4;
+    double size = 5;
+    string album = 6;
 }
 
 message UploadVideoToAlbumResponse{
@@ -240,9 +268,10 @@ message UploadVideoToAlbumResponse{
 }
 
 message DeletePhotoFromAlbumRequest {
-    string userid = 1;
-    string album = 2;
-    bytes photo = 3;
+    string access_token = 1;
+    string login_token = 2;
+    string album = 3;
+    bytes photo = 4;
 }
 
 message DeletePhotoFromAlbumResponse {
@@ -250,9 +279,10 @@ message DeletePhotoFromAlbumResponse {
 }
 
 message DeleteVideoFromAlbumRequest {
-    string userid = 1;
-    string album = 2;
-    bytes video = 3;
+    string access_token = 1;
+    string login_token = 2;
+    string album = 3;
+    bytes video = 4;
 }
 
 message DeleteVideoFromAlbumResponse {
@@ -260,8 +290,9 @@ message DeleteVideoFromAlbumResponse {
 }
 
 message GetAlbumInfoRequest {
-    string userid = 1;
-    string album = 2;
+    string access_token = 1;
+    string login_token = 2;
+    string album = 3;
 }
 
 message GetAlbumInfoResponse {
@@ -272,8 +303,9 @@ message GetAlbumInfoResponse {
 //#####################    Util funcs' messages
 
 message GetFullPhotoByThumbnailRequest {
-    string userid = 1;
-    bytes thumbnail = 2;
+    string access_token = 1;
+    string login_token = 2;
+    bytes thumbnail = 3;
 }
 
 message GetFullPhotoByThumbnailResponse {
