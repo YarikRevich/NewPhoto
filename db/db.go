@@ -58,19 +58,19 @@ func (d *DB) CreateTables() {
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS token (userid text, access_token uuid, login_token uuid, UNIQUE(userid ,access_token, login_token), FOREIGN KEY(userid) REFERENCES users(userid))")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS token (userid text, access_token uuid, login_token uuid, UNIQUE(userid ,access_token, login_token), FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS photos (userid text, photo bytea, thumbnail bytea, extension text, size float8, album text[], tags text[], FOREIGN KEY(userid) REFERENCES users(userid))")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS photos (userid text, photo bytea, thumbnail bytea, extension text, size float8, album text[], tags text[], FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid text, video bytea, extension text, size float8, album text[], FOREIGN KEY(userid) REFERENCES users(userid))")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid text, video bytea, extension text, size float8, album text[], FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS albums (userid text, name text, FOREIGN KEY(userid) REFERENCES users(userid))")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS albums (userid text, name text, FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
@@ -115,7 +115,6 @@ func (d *DB) Login(login, pass string) (string, string, error) {
 				break
 			}
 		}
-		fmt.Println(newAccessToken, newLoginToken, "LOGIN")
 		if _, err := d.db.Exec("UPDATE token SET access_token = $1, login_token = $2 WHERE userid = $3", newAccessToken, newLoginToken, c); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("Login", err)
 		}
@@ -169,7 +168,6 @@ func (d *DB) RetrieveToken(accessToken, loginToken string) (string, string, bool
 				break
 			}
 		}
-		fmt.Println(newAccessToken, newLoginToken, "RETRIEVE")
 		if _, err := d.db.Exec("UPDATE token SET access_token = $1, login_token = $2 WHERE access_token = $3 AND login_token = $4", newAccessToken, newLoginToken, accessToken, loginToken); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
 		}
@@ -180,7 +178,6 @@ func (d *DB) RetrieveToken(accessToken, loginToken string) (string, string, bool
 
 func (d *DB) GetUserID(accessToken, loginToken string) string {
 	var userID string
-	fmt.Println(accessToken, loginToken, "GETUSERID")
 	if err := d.db.Get(&userID, "SELECT userid FROM token WHERE access_token = $1 AND login_token = $2", accessToken, loginToken); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetUserID", err)
 	}
@@ -227,28 +224,34 @@ func (d *DB) UploadVideo(userid, extension string, video []byte, size float64) {
 	d.db.MustExec("INSERT INTO videos (userid, video, extension, size) VALUES ($1, $2, $3, $4)", userid, video, extension, size)
 }
 
+func (d *DB) DeleteAccount(userid string) {
+	if _, err := d.db.Exec("DELETE FROM users WHERE userid = $1", userid); err != nil {
+		log.Logger.CFatalln("DeleteAccount", err)
+	}
+}
+
 func (d *DB) GetUserinfo(userid string) (string, string, float64) {
 	// Returns all the available storage for uploading by the passed user ...
 
 	var storage float64
-	if err := d.db.Select(&storage, "SELECT storage FROM users WHERE userid = $1", userid); err != nil {
+	if err := d.db.Get(&storage, "SELECT storage FROM users WHERE userid = $1", userid); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetUserinfo", err)
 	}
 
-	var size float64
-	if err := d.db.Select(&size, "SELECT SUM(size) FROM photos WHERE userid = $1", userid); err != nil {
+	var size sql.NullFloat64
+	if err := d.db.Get(&size, "SELECT SUM(size) FROM photos WHERE userid = $1", userid); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetUserinfo", err)
 	}
 
 	var Userinfo struct {
-		firstname  string
-		secondname string
+		Firstname  string
+		Secondname string
 	}
-	if err := d.db.Select(&Userinfo, "SELECT firstname, secondname FROM users WHERE userid = $1", userid); err != nil {
+	if err := d.db.Get(&Userinfo, "SELECT firstname, secondname FROM users WHERE userid = $1", userid); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetUserinfo", err)
 	}
 
-	return Userinfo.firstname, Userinfo.secondname, storage - size
+	return Userinfo.Firstname, Userinfo.Secondname, storage - size.Float64
 }
 
 func (d *DB) GetUserAvatar(userid string) []byte {
@@ -322,12 +325,11 @@ func (d *DB) UploadPhotoToAlbum(userid, extension, album string, size float64, p
 }
 
 func (d *DB) UploadVideoToAlbum(userid, extension, album string, video []byte, size float64) {
-	err := d.db.MustExec(
-		"INSERT INTO videos (userid, video, extension, size) (SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT video FROM videos WHERE userid = $1 AND video = $2))", userid, video, extension, size)
-	if err != nil {
+	if _, err := d.db.Exec(
+		"INSERT INTO videos (userid, video, extension, size) (SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT video FROM videos WHERE userid = $1 AND video = $2))", userid, video, extension, size); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
 	}
-	if err := d.db.MustExec("UPDATE videos SET album = array_append(album, $1) WHERE userid = $2 AND video = $3", album, userid, video); err != nil {
+	if _, err := d.db.Exec("UPDATE videos SET album = array_append(album, $1) WHERE userid = $2 AND video = $3", album, userid, video); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
 	}
 }
@@ -344,11 +346,11 @@ func (d *DB) DeleteAlbum(userid, album string) bool {
 }
 
 func (d *DB) DeletePhotoFromAlbum(userid, album string, photo []byte) {
-	d.db.MustExec("UPDATE photos SET album = array_remove(album, $1) WHERE userid = $2, AND photo = $3", album, userid, photo)
+	d.db.MustExec("UPDATE photos SET album = array_remove(album, $1) WHERE userid = $2 AND photo = $3", album, userid, photo)
 }
 
 func (d *DB) DeleteVideoFromAlbum(userid, album string, video []byte) {
-	d.db.MustExec("UPDATE videos SET album = array_remove(album, $1) WHERE userid = $2, AND video = $3", album, userid, video)
+	d.db.MustExec("UPDATE videos SET album = array_remove(album, $1) WHERE userid = $2 AND video = $3", album, userid, video)
 }
 
 func (d *DB) GetAlbumInfo(userid, album string) int64 {

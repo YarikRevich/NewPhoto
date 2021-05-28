@@ -180,6 +180,7 @@ type NewPhotosClient interface {
 	GetVideos(ctx context.Context, in *GetVideosRequest, opts ...grpc.CallOption) (NewPhotos_GetVideosClient, error)
 	UploadPhoto(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadPhotoClient, error)
 	UploadVideo(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadVideoClient, error)
+	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*DeleteAccountResponse, error)
 	GetUserinfo(ctx context.Context, in *GetUserinfoRequest, opts ...grpc.CallOption) (*GetUserinfoResponse, error)
 	GetUserAvatar(ctx context.Context, in *GetUserAvatarRequest, opts ...grpc.CallOption) (*GetUserAvatarResponse, error)
 	SetUserAvatar(ctx context.Context, in *SetUserAvatarRequest, opts ...grpc.CallOption) (*SetUserAvatarResponse, error)
@@ -193,6 +194,7 @@ type NewPhotosClient interface {
 	DeletePhotoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeletePhotoFromAlbumClient, error)
 	DeleteVideoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeleteVideoFromAlbumClient, error)
 	GetAlbumInfo(ctx context.Context, in *GetAlbumInfoRequest, opts ...grpc.CallOption) (*GetAlbumInfoResponse, error)
+	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	GetFullPhotoByThumbnail(ctx context.Context, in *GetFullPhotoByThumbnailRequest, opts ...grpc.CallOption) (*GetFullPhotoByThumbnailResponse, error)
 }
 
@@ -334,6 +336,15 @@ func (x *newPhotosUploadVideoClient) CloseAndRecv() (*UploadVideoResponse, error
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *newPhotosClient) DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*DeleteAccountResponse, error) {
+	out := new(DeleteAccountResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/DeleteAccount", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *newPhotosClient) GetUserinfo(ctx context.Context, in *GetUserinfoRequest, opts ...grpc.CallOption) (*GetUserinfoResponse, error) {
@@ -622,6 +633,15 @@ func (c *newPhotosClient) GetAlbumInfo(ctx context.Context, in *GetAlbumInfoRequ
 	return out, nil
 }
 
+func (c *newPhotosClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
+	out := new(PingResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/Ping", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *newPhotosClient) GetFullPhotoByThumbnail(ctx context.Context, in *GetFullPhotoByThumbnailRequest, opts ...grpc.CallOption) (*GetFullPhotoByThumbnailResponse, error) {
 	out := new(GetFullPhotoByThumbnailResponse)
 	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetFullPhotoByThumbnail", in, out, opts...)
@@ -639,6 +659,7 @@ type NewPhotosServer interface {
 	GetVideos(*GetVideosRequest, NewPhotos_GetVideosServer) error
 	UploadPhoto(NewPhotos_UploadPhotoServer) error
 	UploadVideo(NewPhotos_UploadVideoServer) error
+	DeleteAccount(context.Context, *DeleteAccountRequest) (*DeleteAccountResponse, error)
 	GetUserinfo(context.Context, *GetUserinfoRequest) (*GetUserinfoResponse, error)
 	GetUserAvatar(context.Context, *GetUserAvatarRequest) (*GetUserAvatarResponse, error)
 	SetUserAvatar(context.Context, *SetUserAvatarRequest) (*SetUserAvatarResponse, error)
@@ -652,6 +673,7 @@ type NewPhotosServer interface {
 	DeletePhotoFromAlbum(NewPhotos_DeletePhotoFromAlbumServer) error
 	DeleteVideoFromAlbum(NewPhotos_DeleteVideoFromAlbumServer) error
 	GetAlbumInfo(context.Context, *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error)
+	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	GetFullPhotoByThumbnail(context.Context, *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error)
 	mustEmbedUnimplementedNewPhotosServer()
 }
@@ -671,6 +693,9 @@ func (UnimplementedNewPhotosServer) UploadPhoto(NewPhotos_UploadPhotoServer) err
 }
 func (UnimplementedNewPhotosServer) UploadVideo(NewPhotos_UploadVideoServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadVideo not implemented")
+}
+func (UnimplementedNewPhotosServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*DeleteAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccount not implemented")
 }
 func (UnimplementedNewPhotosServer) GetUserinfo(context.Context, *GetUserinfoRequest) (*GetUserinfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserinfo not implemented")
@@ -710,6 +735,9 @@ func (UnimplementedNewPhotosServer) DeleteVideoFromAlbum(NewPhotos_DeleteVideoFr
 }
 func (UnimplementedNewPhotosServer) GetAlbumInfo(context.Context, *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAlbumInfo not implemented")
+}
+func (UnimplementedNewPhotosServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
 func (UnimplementedNewPhotosServer) GetFullPhotoByThumbnail(context.Context, *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFullPhotoByThumbnail not implemented")
@@ -819,6 +847,24 @@ func (x *newPhotosUploadVideoServer) Recv() (*UploadVideoRequest, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func _NewPhotos_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).DeleteAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/DeleteAccount",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).DeleteAccount(ctx, req.(*DeleteAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _NewPhotos_GetUserinfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1096,6 +1142,24 @@ func _NewPhotos_GetAlbumInfo_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NewPhotos_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).Ping(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/Ping",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).Ping(ctx, req.(*PingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _NewPhotos_GetFullPhotoByThumbnail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetFullPhotoByThumbnailRequest)
 	if err := dec(in); err != nil {
@@ -1122,6 +1186,10 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*NewPhotosServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "DeleteAccount",
+			Handler:    _NewPhotos_DeleteAccount_Handler,
+		},
+		{
 			MethodName: "GetUserinfo",
 			Handler:    _NewPhotos_GetUserinfo_Handler,
 		},
@@ -1144,6 +1212,10 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetAlbumInfo",
 			Handler:    _NewPhotos_GetAlbumInfo_Handler,
+		},
+		{
+			MethodName: "Ping",
+			Handler:    _NewPhotos_Ping_Handler,
 		},
 		{
 			MethodName: "GetFullPhotoByThumbnail",

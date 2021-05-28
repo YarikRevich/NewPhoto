@@ -47,17 +47,25 @@ message RetrieveTokenResponse {
 
 service NewPhotos {
   
-    // ####################    Main funcs
+    // ####################    Photo funcs
 
     rpc  GetPhotos(GetPhotosRequest) returns (stream GetPhotosResponse);
 
-    rpc GetVideos (GetVideosRequest) returns (stream GetVideosResponse);
-
     rpc  UploadPhoto(stream UploadPhotoRequest) returns (UploadPhotoResponse);
+
+    rpc  GetPhotosNum()returns()
+
+    // ####################    Video funcs
+
+    rpc GetVideos (GetVideosRequest) returns (stream GetVideosResponse);
 
     rpc UploadVideo(stream UploadVideoRequest) returns (UploadVideoResponse);
 
+    rpc GetVideosNum()returns();
+
     //#####################    Account funcs   
+
+    rpc DeleteAccount(DeleteAccountRequest)returns (DeleteAccountResponse);
     
     rpc  GetUserinfo(GetUserinfoRequest) returns (GetUserinfoResponse);
 
@@ -73,21 +81,29 @@ service NewPhotos {
     
     rpc  GetAlbums(GetAlbumsRequest) returns (stream GetAlbumsResponse);
 
+    rpc  GetAlbumsNum(GetAlbumInfoRequest) returns (GetAlbumInfoResponse);
+
     rpc  CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse);
 
     rpc  DeleteAlbum(DeleteAlbumRequest) returns (DeleteAlbumResponse);
 
     rpc  UploadPhotoToAlbum(stream UploadPhotoToAlbumRequest) returns (UploadPhotoToAlbumResponse);
 
+    rpc  GetPhotosInAlbum()returns()
+
     rpc  UploadVideoToAlbum(stream UploadVideoToAlbumRequest) returns (UploadVideoToAlbumResponse);
 
+    rpc GetVideosInAlbum()returns()
+    
     rpc DeletePhotoFromAlbum(stream DeletePhotoFromAlbumRequest) returns (DeletePhotoFromAlbumResponse);
 
     rpc DeleteVideoFromAlbum(stream DeleteVideoFromAlbumRequest) returns (DeleteVideoFromAlbumResponse);
 
-    rpc GetAlbumInfo (GetAlbumInfoRequest) returns (GetAlbumInfoResponse);
+   
 
     //#####################    Util funcs
+
+    rpc Ping(PingRequest)returns(PingResponse);
 
     rpc  GetFullPhotoByThumbnail(GetFullPhotoByThumbnailRequest) returns (GetFullPhotoByThumbnailResponse);
 }
@@ -146,6 +162,15 @@ message UploadVideoResponse {
 }
 
 //#####################    Account funcs' messages   
+
+message DeleteAccountRequest {
+    string access_token = 1;
+    string login_token = 2;
+}
+
+message DeleteAccountResponse {
+    bool ok = 1;
+}
 
 message GetUserinfoRequest {
     string access_token = 1;
@@ -301,6 +326,12 @@ message GetAlbumInfoResponse {
 }
 
 //#####################    Util funcs' messages
+
+message PingRequest{}
+
+message PingResponse{
+    bool pong = 1;
+}
 
 message GetFullPhotoByThumbnailRequest {
     string access_token = 1;

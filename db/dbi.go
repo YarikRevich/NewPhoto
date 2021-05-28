@@ -10,7 +10,7 @@ type Auth interface {
 	//Checks if user's cred are ok and then
 	//Returns his tokens
 	Login(login, pass string) (string, string, error)
-	
+
 	//Logouts user and then removes tokens
 	Logout(userid string) error
 
@@ -19,7 +19,7 @@ type Auth interface {
 	RetrieveToken(accessToken, loginToken string) (string, string, bool)
 
 	//Gets userID using accessToken and loginToken
-	GetUserID(accessToken, loginToken string)string
+	GetUserID(accessToken, loginToken string) string
 
 	RegisterUser(login, pass, firstname, secondname string) error
 }
@@ -32,6 +32,7 @@ type Home interface {
 }
 
 type Account interface {
+	DeleteAccount(userid string)
 	GetUserinfo(userid string) (string, string, float64)
 	GetUserAvatar(userid string) []byte
 	SetUserAvatar(userid string, avatar []byte)

@@ -135,6 +135,13 @@ func (s *NewPhoto) UploadVideo(stream NewPhotos_UploadVideoServer) error {
 	return nil
 }
 
+func (s *NewPhoto) DeleteAccount(ctx context.Context, r *DeleteAccountRequest) (*DeleteAccountResponse, error) {
+	log.Logger.UsingAccessLogFile().CInfoln("DeleteAccount")
+
+	s.DBInstanse.DeleteAccount(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()))
+	return &DeleteAccountResponse{Ok: true}, nil
+}
+
 func (s *NewPhoto) GetUserinfo(cxt context.Context, r *GetUserinfoRequest) (*GetUserinfoResponse, error) {
 	log.Logger.UsingAccessLogFile().CInfoln("GetUserinfo")
 	if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_USER_INFO); cached {
@@ -345,6 +352,10 @@ func (s *NewPhoto) GetAlbumInfo(ctx context.Context, r *GetAlbumInfoRequest) (*G
 
 	n := s.DBInstanse.GetAlbumInfo(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetAlbum())
 	return &GetAlbumInfoResponse{Ok: true, MediaNum: n}, nil
+}
+
+func (s *NewPhoto) Ping(ctx context.Context, r *PingRequest) (*PingResponse, error) {
+	return &PingResponse{Pong: true}, nil
 }
 
 func (s *NewPhoto) GetFullPhotoByThumbnail(ctx context.Context, r *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error) {
