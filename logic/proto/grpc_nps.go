@@ -36,7 +36,7 @@ func (s *NewPhoto) GetPhotos(r *GetPhotosRequest, stream NewPhotos_GetPhotosServ
 			return nil
 		}
 
-		result := s.DBInstanse.GetPhotos(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()))
+		result := s.DBInstanse.GetPhotos(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetOffset(), r.GetPage())
 
 		var model []caching.GetPhotosModel
 		for _, value := range result {
@@ -49,6 +49,13 @@ func (s *NewPhoto) GetPhotos(r *GetPhotosRequest, stream NewPhotos_GetPhotosServ
 		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS, conf.Configure(model))
 		return nil
 	}
+}
+
+func (s *NewPhoto) GetPhotosNum(ctx context.Context, r *GetPhotosNumRequest) (*GetPhotosNumResponse, error) {
+	log.Logger.UsingAccessLogFile().CInfoln("GetPhotosNum")
+
+	n := s.DBInstanse.GetPhotosNum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()))
+	return &GetPhotosNumResponse{Ok: true, Num: n}, nil
 }
 
 func (s *NewPhoto) GetVideos(r *GetVideosRequest, stream NewPhotos_GetVideosServer) error {
@@ -89,6 +96,13 @@ func (s *NewPhoto) GetVideos(r *GetVideosRequest, stream NewPhotos_GetVideosServ
 
 		return nil
 	}
+}
+
+func (s *NewPhoto) GetVideosNum(ctx context.Context, r *GetVideosNumRequest) (*GetVideosNumResponse, error) {
+	log.Logger.UsingAccessLogFile().CInfoln("GetVideosNum")
+
+	n := s.DBInstanse.GetVideosNum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()))
+	return &GetVideosNumResponse{Ok: true, Num: n}, nil
 }
 
 func (s *NewPhoto) UploadPhoto(stream NewPhotos_UploadPhotoServer) error {
@@ -189,7 +203,7 @@ func (s *NewPhoto) GetPhotosFromAlbum(r *GetPhotosFromAlbumRequest, stream NewPh
 	case <-stream.Context().Done():
 		return nil
 	default:
-		result := s.DBInstanse.GetPhotosFromAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName())
+		result := s.DBInstanse.GetPhotosFromAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName(), r.GetOffset(), r.GetPage())
 		var model []caching.GetPhotosFromAlbum
 		for _, value := range result {
 			model = append(model, caching.GetPhotosFromAlbum{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Album: value.Album.String})
@@ -203,6 +217,13 @@ func (s *NewPhoto) GetPhotosFromAlbum(r *GetPhotosFromAlbumRequest, stream NewPh
 	}
 }
 
+func (s *NewPhoto) GetPhotosInAlbumNum(ctx context.Context, r *GetPhotosInAlbumNumRequest) (*GetPhotosInAlbumNumResponse, error) {
+	log.Logger.UsingAccessLogFile().CInfoln("GetPhotosInAlbumNum")
+
+	n := s.DBInstanse.GetPhotosInAlbumNum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName())
+	return &GetPhotosInAlbumNumResponse{Ok: true, Num: n}, nil
+}
+
 func (s *NewPhoto) GetVideosFromAlbum(r *GetVideosFromAlbumRequest, stream NewPhotos_GetVideosFromAlbumServer) error {
 	log.Logger.UsingAccessLogFile().CInfoln("GetVideosFromAlbum")
 
@@ -210,7 +231,7 @@ func (s *NewPhoto) GetVideosFromAlbum(r *GetVideosFromAlbumRequest, stream NewPh
 	case <-stream.Context().Done():
 		return nil
 	default:
-		result := s.DBInstanse.GetVideosFromAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName())
+		result := s.DBInstanse.GetVideosFromAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName(), r.GetOffset(), r.GetPage())
 
 		var model []caching.GetVideosFromAlbum
 		for _, value := range result {
@@ -224,6 +245,13 @@ func (s *NewPhoto) GetVideosFromAlbum(r *GetVideosFromAlbumRequest, stream NewPh
 
 		return nil
 	}
+}
+
+func (s *NewPhoto) GetVideosInAlbumNum(ctx context.Context, r *GetVideosInAlbumNumRequest) (*GetVideosInAlbumNumResponse, error) {
+	log.Logger.UsingAccessLogFile().CInfoln("GetVideosInAlbumNum")
+
+	n := s.DBInstanse.GetVideosInAlbumNum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName())
+	return &GetVideosInAlbumNumResponse{Ok: true, Num: n}, nil
 }
 
 func (s *NewPhoto) UploadPhotoToAlbum(stream NewPhotos_UploadPhotoToAlbumServer) error {
@@ -347,11 +375,11 @@ func (s *NewPhoto) DeleteAlbum(ctx context.Context, r *DeleteAlbumRequest) (*Del
 	return &DeleteAlbumResponse{Ok: true}, nil
 }
 
-func (s *NewPhoto) GetAlbumInfo(ctx context.Context, r *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error) {
+func (s *NewPhoto) GetAlbumsNum(ctx context.Context, r *GetAlbumsNumRequest) (*GetAlbumsNumResponse, error) {
 	log.Logger.UsingAccessLogFile().CInfoln("GetAlbumInfo")
 
-	n := s.DBInstanse.GetAlbumInfo(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetAlbum())
-	return &GetAlbumInfoResponse{Ok: true, MediaNum: n}, nil
+	n := s.DBInstanse.GetAlbumsNum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()))
+	return &GetAlbumsNumResponse{Ok: true, Num: n}, nil
 }
 
 func (s *NewPhoto) Ping(ctx context.Context, r *PingRequest) (*PingResponse, error) {

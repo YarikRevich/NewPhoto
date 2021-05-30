@@ -58,7 +58,20 @@ func (d *DB) CreateTables() {
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS token (userid text, access_token uuid, login_token uuid, UNIQUE(userid ,access_token, login_token), FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
+	t, err := d.db.Begin()
+	if err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
+	}
+	_, err = d.db.Exec("CREATE TYPE source_type as ENUM ('web', 'mobile')")
+	if err != nil {
+		if p, ok := err.(*pq.Error); ok && p.Code != "42710" {
+			log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
+		}
+	}
+	if err := t.Commit(); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
+	}
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS token (userid text, access_token uuid, login_token uuid, source_type source_type, UNIQUE(userid ,access_token, login_token), FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
@@ -82,7 +95,7 @@ func (d *DB) CloseDB() {
 	}
 }
 
-func (d *DB) Login(login, pass string) (string, string, error) {
+func (d *DB) Login(login, pass, sourceType string) (string, string, error) {
 	c := string(utils.EncodeLogin(login, pass))
 	var userid string
 	tx, err := d.db.Begin()
@@ -98,7 +111,7 @@ func (d *DB) Login(login, pass string) (string, string, error) {
 		for {
 			newAccessToken = uuid.NewString()
 			var e bool
-			if err := d.db.Get(&e, "SELECT COUNT((SELECT access_token FROM token WHERE access_token = $1)) = 0", newAccessToken); err != nil && err != sql.ErrNoRows {
+			if err := d.db.Get(&e, "SELECT COUNT((SELECT access_token FROM token WHERE access_token = $1 AND source_type = $2)) = 0", newAccessToken, sourceType); err != nil && err != sql.ErrNoRows {
 				log.Logger.UsingErrorLogFile().CFatalln("Login", err)
 			}
 			if e {
@@ -108,14 +121,14 @@ func (d *DB) Login(login, pass string) (string, string, error) {
 		for {
 			newLoginToken = uuid.NewString()
 			var e bool
-			if err := d.db.Get(&e, "SELECT COUNT((SELECT login_token FROM token WHERE login_token = $1)) = 0", newLoginToken); err != nil && err != sql.ErrNoRows {
+			if err := d.db.Get(&e, "SELECT COUNT((SELECT login_token FROM token WHERE login_token = $1 AND source_type=$2)) = 0", newLoginToken, sourceType); err != nil && err != sql.ErrNoRows {
 				log.Logger.UsingErrorLogFile().CFatalln("Login", err)
 			}
 			if e {
 				break
 			}
 		}
-		if _, err := d.db.Exec("UPDATE token SET access_token = $1, login_token = $2 WHERE userid = $3", newAccessToken, newLoginToken, c); err != nil {
+		if _, err := d.db.Exec("UPDATE token SET access_token = $1, login_token = $2 WHERE userid = $3 AND source_type =$4", newAccessToken, newLoginToken, c, sourceType); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("Login", err)
 		}
 		return newAccessToken, newLoginToken, nil
@@ -126,12 +139,12 @@ func (d *DB) Login(login, pass string) (string, string, error) {
 	return "", "", errors.New(exceptions.LOGIN_ERROR)
 }
 
-func (d *DB) Logout(userid string) error {
+func (d *DB) Logout(userid, sourceType string) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("Logout", err)
 	}
-	if _, err := d.db.Exec("DELETE FROM token WHERE userid = $1", userid); err != nil {
+	if _, err := d.db.Exec("DELETE FROM token WHERE userid = $1 AND source_type=$2", userid, sourceType); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("Logout", err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -140,41 +153,59 @@ func (d *DB) Logout(userid string) error {
 	return nil
 }
 
-func (d *DB) RetrieveToken(accessToken, loginToken string) (string, string, bool) {
-	var r bool
-	if err := d.db.Get(&r, "SELECT COUNT((SELECT userid from token WHERE access_token = $1 AND login_token = $2)) != 0", accessToken, loginToken); err != nil && err != sql.ErrNoRows {
-		log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
+func (d *DB) IsTokenCorrect(accessToken, loginToken, sourceType string) bool {
+	var ok bool
+	if err := d.db.Get(&ok, "SELECT COUNT((SELECT userid from token WHERE access_token = $1 AND login_token = $2 AND source_type = $3)) != 0", accessToken, loginToken, sourceType); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("IsTokenCorrect", err)
 	}
-	if r {
-		var newAccessToken string
-		var newLoginToken string
-		for {
-			newAccessToken = uuid.NewString()
-			var e bool
-			if err := d.db.Get(&e, "SELECT COUNT((SELECT userid FROM token WHERE access_token = $1)) = 0", newAccessToken); err != nil && err != sql.ErrNoRows {
-				log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
-			}
-			if e {
-				break
-			}
-		}
-		for {
-			newLoginToken = uuid.NewString()
-			var e bool
-			if err := d.db.Get(&e, "SELECT COUNT((SELECT userid FROM token WHERE login_token = $1)) = 0", newLoginToken); err != nil && err != sql.ErrNoRows {
-				log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
-			}
-			if e {
-				break
-			}
-		}
-		if _, err := d.db.Exec("UPDATE token SET access_token = $1, login_token = $2 WHERE access_token = $3 AND login_token = $4", newAccessToken, newLoginToken, accessToken, loginToken); err != nil {
-			log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
-		}
-		return newAccessToken, newLoginToken, true
-	}
-	return accessToken, loginToken, false
+	return ok
 }
+
+// func (d *DB) RetrieveToken(accessToken, loginToken, sourceType string) (string, string, bool) {
+// 	t, err := d.db.Begin()
+// 	if err != nil {
+// 		log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
+// 	}
+// 	defer func() {
+// 		if err := t.Commit(); err != nil {
+// 			log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
+// 		}
+// 	}()
+
+// 	var r bool
+// 	if err := d.db.Get(&r, "SELECT COUNT((SELECT userid from token WHERE access_token = $1 AND login_token = $2 AND source_type=$3)) != 0", accessToken, loginToken, sourceType); err != nil && err != sql.ErrNoRows {
+// 		log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
+// 	}
+// 	if r {
+// 		var newAccessToken string
+// 		var newLoginToken string
+// 		for {
+// 			newAccessToken = uuid.NewString()
+// 			var e bool
+// 			if err := d.db.Get(&e, "SELECT COUNT((SELECT userid FROM token WHERE access_token = $1 AND source_type=$2)) = 0", newAccessToken, sourceType); err != nil && err != sql.ErrNoRows {
+// 				log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
+// 			}
+// 			if e {
+// 				break
+// 			}
+// 		}
+// 		for {
+// 			newLoginToken = uuid.NewString()
+// 			var e bool
+// 			if err := d.db.Get(&e, "SELECT COUNT((SELECT userid FROM token WHERE login_token = $1 AND source_type=$2)) = 0", newLoginToken, sourceType); err != nil && err != sql.ErrNoRows {
+// 				log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
+// 			}
+// 			if e {
+// 				break
+// 			}
+// 		}
+// 		if _, err := d.db.Exec("UPDATE token SET access_token = $1, login_token = $2 WHERE access_token = $3 AND login_token = $4 AND source_type=$5", newAccessToken, newLoginToken, accessToken, loginToken, sourceType); err != nil {
+// 			log.Logger.UsingErrorLogFile().CFatalln("RetrieveToken", err)
+// 		}
+// 		return newAccessToken, newLoginToken, true
+// 	}
+// 	return accessToken, loginToken, false
+// }
 
 func (d *DB) GetUserID(accessToken, loginToken string) string {
 	var userID string
@@ -194,18 +225,32 @@ func (d *DB) RegisterUser(login, pass, firstname, secondname string) error {
 		}
 		log.Logger.UsingErrorLogFile().CFatalln("RegisterUser", err)
 	}
-	if _, err := d.db.Exec("INSERT INTO token (userid) VALUES ($1)", string(utils.EncodeLogin(login, pass))); err != nil {
+	if _, err := d.db.Exec("INSERT INTO token (userid, source_type) VALUES ($1, 'web')", string(utils.EncodeLogin(login, pass))); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("RegisterUser", err)
+	}
+	if _, err := d.db.Exec("INSERT INTO token (userid, source_type) VALUES ($1, 'mobile')", string(utils.EncodeLogin(login, pass))); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("RegisterUser", err)
 	}
 	return nil
 }
 
-func (d *DB) GetPhotos(userid string) []GetPhotosModel {
+func (d *DB) GetPhotos(userid string, offset, page int64) []GetPhotosModel {
 	r := []GetPhotosModel{}
 	if err := d.db.Select(&r, "SELECT photo, thumbnail, extension, size, tags FROM photos WHERE userid = $1", userid); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", err)
 	}
+	if int64(len(r)) >= (page-1)*offset+offset {
+		return r[(page-1)*offset : (page-1)*offset+offset]
+	}
 	return r
+}
+
+func (d *DB) GetPhotosNum(userid string) int64 {
+	var num int64
+	if err := d.db.Get(&num, "SELECT COUNT(*) FROM photos WHERE userid = $1", userid); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("GetPhotosNum", err)
+	}
+	return num
 }
 
 func (d *DB) GetVideos(userid string) []GetVideosModel {
@@ -214,6 +259,14 @@ func (d *DB) GetVideos(userid string) []GetVideosModel {
 		log.Logger.UsingErrorLogFile().CFatalln("GetVideos", err)
 	}
 	return r
+}
+
+func (d *DB) GetVideosNum(userid string) int64 {
+	var num int64
+	if err := d.db.Get(&num, "SELECT COUNT(*) FROM videos WHERE userid = $1", userid); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("GetVideosNum", err)
+	}
+	return num
 }
 
 func (d *DB) UploadPhoto(userid string, photo, thumbnail []byte, extension string, size float64, tags []string) {
@@ -297,20 +350,42 @@ func (d *DB) GetAlbums(userid string) []GetAlbumsModel {
 	return r
 }
 
-func (d *DB) GetPhotosFromAlbum(userid, name string) []GetPhotosFromAlbumModel {
+func (d *DB) GetPhotosFromAlbum(userid, name string, offset, page int64) []GetPhotosFromAlbumModel {
 	r := []GetPhotosFromAlbumModel{}
 	if err := d.db.Select(&r, `SELECT userid, photo, thumbnail, extension, size, album FROM photos WHERE userid = $1 AND $2=ANY(album)`, userid, name); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetPhotosFromAlbum", err)
 	}
+	if int64(len(r)) >= (page-1)*offset+offset {
+		return r[(page-1)*offset : (page-1)*offset+offset]
+	}
 	return r
 }
 
-func (d *DB) GetVideosFromAlbum(userid, name string) []GetVideosFromAlbumModel {
+func (d *DB) GetPhotosInAlbumNum(userid, name string) int64 {
+	var num int64
+	if err := d.db.Get(&num, "SELECT COUNT(*) FROM photos WHERE userid = $1 AND $2=ANY(album)", userid, name); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("GetPhotosInAlbumNum", err)
+	}
+	return num
+}
+
+func (d *DB) GetVideosFromAlbum(userid, name string, offset, page int64) []GetVideosFromAlbumModel {
 	r := []GetVideosFromAlbumModel{}
 	if err := d.db.Select(&r, "SELECT video, extension FROM videos WHERE userid = $1 AND $2=ANY(album)", userid, name); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetVideosFromAlbum", err)
 	}
+	if int64(len(r)) >= (page-1)*offset+offset {
+		return r[(page-1)*offset : (page-1)*offset+offset]
+	}
 	return r
+}
+
+func (d *DB) GetVideosInAlbumNum(userid, name string) int64 {
+	var num int64
+	if err := d.db.Get(&num, "SELECT COUNT(*) FROM videos WHERE userid = $1 AND $2=ANY(album)", userid, name); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("GetVideosInAlbumNum", err)
+	}
+	return num
 }
 
 func (d *DB) UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte) {
@@ -353,17 +428,12 @@ func (d *DB) DeleteVideoFromAlbum(userid, album string, video []byte) {
 	d.db.MustExec("UPDATE videos SET album = array_remove(album, $1) WHERE userid = $2 AND video = $3", album, userid, video)
 }
 
-func (d *DB) GetAlbumInfo(userid, album string) int64 {
-	var mediaNumPhotos []interface{}
-	if err := d.db.Select(&mediaNumPhotos, "SELECT COUNT(*) FROM photos WHERE userid = $1 AND $2=ANY(album)", userid, album); err != nil {
-		log.Logger.UsingErrorLogFile().CFatalln("GetAlbumInfo", err)
+func (d *DB) GetAlbumsNum(userid string) int64 {
+	var num int64
+	if err := d.db.Get(&num, "SELECT COUNT(*) FROM albums WHERE userid = $1", userid); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("GetAlbumsNum", err)
 	}
-
-	var mediaNumVideos []interface{}
-	if err := d.db.Select(&mediaNumVideos, "SELECT COUNT(*) FROM videos WHERE userid = $1 AND $2=ANY(album)", userid, album); err != nil {
-		log.Logger.UsingErrorLogFile().CFatalln("GetAlbumInfo", err)
-	}
-	return mediaNumPhotos[0].(int64) + mediaNumVideos[0].(int64)
+	return num
 }
 
 func (d *DB) GetFullPhotoByThumbnail(userid string, thumbnail []byte) []byte {

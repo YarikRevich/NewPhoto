@@ -8,14 +8,17 @@ option go_package = "logic/proto";
 service Authentication {
     rpc RegisterUser(UserRegisterRequest) returns (UserRegisterResponse);
     rpc LoginUser(UserLoginRequest) returns (UserLoginResponse);
-    rpc RetrieveToken(RetrieveTokenRequest) returns (RetrieveTokenResponse);
+    rpc IsTokenCorrect(IsTokenCorrectRequest) returns (IsTokenCorrectResponse);
+    // rpc RetrieveToken(RetrieveTokenRequest) returns (RetrieveTokenResponse);
 } 
+
 
 message UserRegisterRequest{
     string login = 1;
     string password = 2;
     string firstname = 3;
     string secondname = 4;
+    string source_type = 5;
 }
 
 message UserRegisterResponse{
@@ -25,6 +28,7 @@ message UserRegisterResponse{
 message UserLoginRequest{
     string login = 1;
     string password = 2;
+    string source_type = 5;
 }
 
 message UserLoginResponse{
@@ -33,9 +37,20 @@ message UserLoginResponse{
     bool ok = 3;
 }
 
+message IsTokenCorrectRequest{
+    string access_token = 1;
+    string login_token = 2;
+    string source_type = 3;
+}
+
+message IsTokenCorrectResponse{
+    bool ok = 1;
+}
+
 message RetrieveTokenRequest{
     string access_token = 1;
     string login_token = 2;
+    string source_type = 3;
 }
 
 message RetrieveTokenResponse { 
@@ -53,7 +68,7 @@ service NewPhotos {
 
     rpc  UploadPhoto(stream UploadPhotoRequest) returns (UploadPhotoResponse);
 
-    rpc  GetPhotosNum()returns()
+    rpc  GetPhotosNum(GetPhotosNumRequest) returns (GetPhotosNumResponse);
 
     // ####################    Video funcs
 
@@ -61,7 +76,7 @@ service NewPhotos {
 
     rpc UploadVideo(stream UploadVideoRequest) returns (UploadVideoResponse);
 
-    rpc GetVideosNum()returns();
+    rpc GetVideosNum(GetVideosNumRequest) returns (GetVideosNumResponse);
 
     //#####################    Account funcs   
 
@@ -81,7 +96,7 @@ service NewPhotos {
     
     rpc  GetAlbums(GetAlbumsRequest) returns (stream GetAlbumsResponse);
 
-    rpc  GetAlbumsNum(GetAlbumInfoRequest) returns (GetAlbumInfoResponse);
+    rpc  GetAlbumsNum(GetAlbumsNumRequest) returns (GetAlbumsNumResponse);
 
     rpc  CreateAlbum(CreateAlbumRequest) returns (CreateAlbumResponse);
 
@@ -89,11 +104,11 @@ service NewPhotos {
 
     rpc  UploadPhotoToAlbum(stream UploadPhotoToAlbumRequest) returns (UploadPhotoToAlbumResponse);
 
-    rpc  GetPhotosInAlbum()returns()
+    rpc  GetPhotosInAlbumNum(GetPhotosInAlbumNumRequest) returns (GetPhotosInAlbumNumResponse);
 
     rpc  UploadVideoToAlbum(stream UploadVideoToAlbumRequest) returns (UploadVideoToAlbumResponse);
 
-    rpc GetVideosInAlbum()returns()
+    rpc GetVideosInAlbumNum(GetVideosInAlbumNumRequest) returns (GetVideosInAlbumNumResponse);
     
     rpc DeletePhotoFromAlbum(stream DeletePhotoFromAlbumRequest) returns (DeletePhotoFromAlbumResponse);
 
@@ -114,6 +129,8 @@ service NewPhotos {
 message GetPhotosRequest {
     string access_token = 1;
     string login_token = 2;
+    int64 offset = 3;
+    int64 page = 4;
 }
 
 message GetPhotosResponse {
@@ -149,6 +166,16 @@ message UploadPhotoResponse {
     bool ok = 1;
 }
 
+message GetPhotosNumRequest {
+    string access_token = 1;
+    string login_token = 2;
+}
+
+message GetPhotosNumResponse {
+    bool ok = 1;
+    int64 num = 2;
+}
+
 message UploadVideoRequest {
     string access_token = 1;
     string login_token = 2;
@@ -159,6 +186,16 @@ message UploadVideoRequest {
 
 message UploadVideoResponse {
     bool ok = 1;
+}
+
+message GetVideosNumRequest {
+    string access_token = 1;
+    string login_token = 2;
+}
+
+message GetVideosNumResponse {
+    bool ok = 1;
+    int64 num = 2;
 }
 
 //#####################    Account funcs' messages   
@@ -210,6 +247,8 @@ message GetPhotosFromAlbumRequest{
     string access_token = 1;
     string login_token = 2;
     string name = 3; 
+    int64 offset = 4;
+    int64 page = 5;
 }
 
 message GetPhotosFromAlbumResponse{
@@ -225,6 +264,8 @@ message GetVideosFromAlbumRequest{
     string access_token = 1;
     string login_token = 2;
     string name = 3; 
+    int64 offset = 4;
+    int64 page = 5;
 }
 
 message GetVideosFromAlbumResponse{
@@ -279,6 +320,17 @@ message UploadPhotoToAlbumResponse{
     bool ok = 1;
 }
 
+message GetPhotosInAlbumNumRequest {
+    string access_token = 1;
+    string login_token = 2;
+    string name = 3;
+}
+
+message GetPhotosInAlbumNumResponse {
+    bool ok = 1;
+    int64 num = 2;
+}
+
 message UploadVideoToAlbumRequest{
     string access_token = 1;
     string login_token = 2;
@@ -290,6 +342,17 @@ message UploadVideoToAlbumRequest{
 
 message UploadVideoToAlbumResponse{
     bool ok = 1;
+}
+
+message GetVideosInAlbumNumRequest {
+    string access_token = 1;
+    string login_token = 2;
+    string name = 3;
+}
+
+message GetVideosInAlbumNumResponse {
+    bool ok = 1;
+    int64 num = 2;
 }
 
 message DeletePhotoFromAlbumRequest {
@@ -314,15 +377,14 @@ message DeleteVideoFromAlbumResponse {
     bool ok = 1;
 }
 
-message GetAlbumInfoRequest {
+message GetAlbumsNumRequest {
     string access_token = 1;
     string login_token = 2;
-    string album = 3;
 }
 
-message GetAlbumInfoResponse {
+message GetAlbumsNumResponse {
     bool ok = 1;
-    int64 media_num = 2;
+    int64 num = 2;
 }
 
 //#####################    Util funcs' messages

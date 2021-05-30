@@ -3,7 +3,6 @@ package proto
 import (
 	"NewPhoto/db"
 	"context"
-	"fmt"
 )
 
 type Authentication struct {
@@ -11,9 +10,8 @@ type Authentication struct {
 }
 
 func (a *Authentication) LoginUser(ctx context.Context, r *UserLoginRequest) (*UserLoginResponse, error) {
-	accessToken, loginToken, err := a.DBInstanse.Login(r.GetLogin(), r.GetPassword())
+	accessToken, loginToken, err := a.DBInstanse.Login(r.GetLogin(), r.GetPassword(), r.GetSourceType())
 	var ok bool = true
-	fmt.Println("RESUKLT", err)
 	if err != nil {
 		ok = false
 	}
@@ -28,13 +26,18 @@ func (a *Authentication) RegisterUser(ctx context.Context, r *UserRegisterReques
 	return &UserRegisterResponse{Ok: true}, nil
 }
 
-func (a *Authentication) RetrieveToken(ctx context.Context, r *RetrieveTokenRequest) (*RetrieveTokenResponse, error) {
-	accessToken, loginToken, ok := a.DBInstanse.RetrieveToken(r.GetAccessToken(), r.GetLoginToken())
-	if !ok {
-		return &RetrieveTokenResponse{AccessToken: accessToken, LoginToken: loginToken, Ok: false}, nil
-	}
-	return &RetrieveTokenResponse{AccessToken: accessToken, LoginToken: loginToken, Ok: true}, nil
+func (a *Authentication) IsTokenCorrect(ctx context.Context, r *IsTokenCorrectRequest) (*IsTokenCorrectResponse, error) {
+	ok := a.DBInstanse.IsTokenCorrect(r.GetAccessToken(), r.GetLoginToken(), r.GetSourceType())
+	return &IsTokenCorrectResponse{Ok: ok}, nil
 }
+
+// func (a *Authentication) RetrieveToken(ctx context.Context, r *RetrieveTokenRequest) (*RetrieveTokenResponse, error) {
+// 	accessToken, loginToken, ok := a.DBInstanse.RetrieveToken(r.GetAccessToken(), r.GetLoginToken(), r.GetSourceType())
+// 	if !ok {
+// 		return &RetrieveTokenResponse{AccessToken: accessToken, LoginToken: loginToken, Ok: false}, nil
+// 	}
+// 	return &RetrieveTokenResponse{AccessToken: accessToken, LoginToken: loginToken, Ok: true}, nil
+// }
 
 func (a *Authentication) mustEmbedUnimplementedAuthenticationServer() {}
 

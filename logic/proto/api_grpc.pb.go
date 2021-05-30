@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthenticationClient interface {
 	RegisterUser(ctx context.Context, in *UserRegisterRequest, opts ...grpc.CallOption) (*UserRegisterResponse, error)
 	LoginUser(ctx context.Context, in *UserLoginRequest, opts ...grpc.CallOption) (*UserLoginResponse, error)
-	RetrieveToken(ctx context.Context, in *RetrieveTokenRequest, opts ...grpc.CallOption) (*RetrieveTokenResponse, error)
+	IsTokenCorrect(ctx context.Context, in *IsTokenCorrectRequest, opts ...grpc.CallOption) (*IsTokenCorrectResponse, error)
 }
 
 type authenticationClient struct {
@@ -49,9 +49,9 @@ func (c *authenticationClient) LoginUser(ctx context.Context, in *UserLoginReque
 	return out, nil
 }
 
-func (c *authenticationClient) RetrieveToken(ctx context.Context, in *RetrieveTokenRequest, opts ...grpc.CallOption) (*RetrieveTokenResponse, error) {
-	out := new(RetrieveTokenResponse)
-	err := c.cc.Invoke(ctx, "/main.Authentication/RetrieveToken", in, out, opts...)
+func (c *authenticationClient) IsTokenCorrect(ctx context.Context, in *IsTokenCorrectRequest, opts ...grpc.CallOption) (*IsTokenCorrectResponse, error) {
+	out := new(IsTokenCorrectResponse)
+	err := c.cc.Invoke(ctx, "/main.Authentication/IsTokenCorrect", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (c *authenticationClient) RetrieveToken(ctx context.Context, in *RetrieveTo
 type AuthenticationServer interface {
 	RegisterUser(context.Context, *UserRegisterRequest) (*UserRegisterResponse, error)
 	LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error)
-	RetrieveToken(context.Context, *RetrieveTokenRequest) (*RetrieveTokenResponse, error)
+	IsTokenCorrect(context.Context, *IsTokenCorrectRequest) (*IsTokenCorrectResponse, error)
 	mustEmbedUnimplementedAuthenticationServer()
 }
 
@@ -78,8 +78,8 @@ func (UnimplementedAuthenticationServer) RegisterUser(context.Context, *UserRegi
 func (UnimplementedAuthenticationServer) LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginUser not implemented")
 }
-func (UnimplementedAuthenticationServer) RetrieveToken(context.Context, *RetrieveTokenRequest) (*RetrieveTokenResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RetrieveToken not implemented")
+func (UnimplementedAuthenticationServer) IsTokenCorrect(context.Context, *IsTokenCorrectRequest) (*IsTokenCorrectResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IsTokenCorrect not implemented")
 }
 func (UnimplementedAuthenticationServer) mustEmbedUnimplementedAuthenticationServer() {}
 
@@ -130,20 +130,20 @@ func _Authentication_LoginUser_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Authentication_RetrieveToken_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RetrieveTokenRequest)
+func _Authentication_IsTokenCorrect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IsTokenCorrectRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthenticationServer).RetrieveToken(ctx, in)
+		return srv.(AuthenticationServer).IsTokenCorrect(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/main.Authentication/RetrieveToken",
+		FullMethod: "/main.Authentication/IsTokenCorrect",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthenticationServer).RetrieveToken(ctx, req.(*RetrieveTokenRequest))
+		return srv.(AuthenticationServer).IsTokenCorrect(ctx, req.(*IsTokenCorrectRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -164,8 +164,8 @@ var Authentication_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Authentication_LoginUser_Handler,
 		},
 		{
-			MethodName: "RetrieveToken",
-			Handler:    _Authentication_RetrieveToken_Handler,
+			MethodName: "IsTokenCorrect",
+			Handler:    _Authentication_IsTokenCorrect_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -177,9 +177,11 @@ var Authentication_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NewPhotosClient interface {
 	GetPhotos(ctx context.Context, in *GetPhotosRequest, opts ...grpc.CallOption) (NewPhotos_GetPhotosClient, error)
-	GetVideos(ctx context.Context, in *GetVideosRequest, opts ...grpc.CallOption) (NewPhotos_GetVideosClient, error)
 	UploadPhoto(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadPhotoClient, error)
+	GetPhotosNum(ctx context.Context, in *GetPhotosNumRequest, opts ...grpc.CallOption) (*GetPhotosNumResponse, error)
+	GetVideos(ctx context.Context, in *GetVideosRequest, opts ...grpc.CallOption) (NewPhotos_GetVideosClient, error)
 	UploadVideo(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadVideoClient, error)
+	GetVideosNum(ctx context.Context, in *GetVideosNumRequest, opts ...grpc.CallOption) (*GetVideosNumResponse, error)
 	DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*DeleteAccountResponse, error)
 	GetUserinfo(ctx context.Context, in *GetUserinfoRequest, opts ...grpc.CallOption) (*GetUserinfoResponse, error)
 	GetUserAvatar(ctx context.Context, in *GetUserAvatarRequest, opts ...grpc.CallOption) (*GetUserAvatarResponse, error)
@@ -187,13 +189,15 @@ type NewPhotosClient interface {
 	GetPhotosFromAlbum(ctx context.Context, in *GetPhotosFromAlbumRequest, opts ...grpc.CallOption) (NewPhotos_GetPhotosFromAlbumClient, error)
 	GetVideosFromAlbum(ctx context.Context, in *GetVideosFromAlbumRequest, opts ...grpc.CallOption) (NewPhotos_GetVideosFromAlbumClient, error)
 	GetAlbums(ctx context.Context, in *GetAlbumsRequest, opts ...grpc.CallOption) (NewPhotos_GetAlbumsClient, error)
+	GetAlbumsNum(ctx context.Context, in *GetAlbumsNumRequest, opts ...grpc.CallOption) (*GetAlbumsNumResponse, error)
 	CreateAlbum(ctx context.Context, in *CreateAlbumRequest, opts ...grpc.CallOption) (*CreateAlbumResponse, error)
 	DeleteAlbum(ctx context.Context, in *DeleteAlbumRequest, opts ...grpc.CallOption) (*DeleteAlbumResponse, error)
 	UploadPhotoToAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadPhotoToAlbumClient, error)
+	GetPhotosInAlbumNum(ctx context.Context, in *GetPhotosInAlbumNumRequest, opts ...grpc.CallOption) (*GetPhotosInAlbumNumResponse, error)
 	UploadVideoToAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadVideoToAlbumClient, error)
+	GetVideosInAlbumNum(ctx context.Context, in *GetVideosInAlbumNumRequest, opts ...grpc.CallOption) (*GetVideosInAlbumNumResponse, error)
 	DeletePhotoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeletePhotoFromAlbumClient, error)
 	DeleteVideoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeleteVideoFromAlbumClient, error)
-	GetAlbumInfo(ctx context.Context, in *GetAlbumInfoRequest, opts ...grpc.CallOption) (*GetAlbumInfoResponse, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
 	GetFullPhotoByThumbnail(ctx context.Context, in *GetFullPhotoByThumbnailRequest, opts ...grpc.CallOption) (*GetFullPhotoByThumbnailResponse, error)
 }
@@ -238,40 +242,8 @@ func (x *newPhotosGetPhotosClient) Recv() (*GetPhotosResponse, error) {
 	return m, nil
 }
 
-func (c *newPhotosClient) GetVideos(ctx context.Context, in *GetVideosRequest, opts ...grpc.CallOption) (NewPhotos_GetVideosClient, error) {
-	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[1], "/main.NewPhotos/GetVideos", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &newPhotosGetVideosClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type NewPhotos_GetVideosClient interface {
-	Recv() (*GetVideosResponse, error)
-	grpc.ClientStream
-}
-
-type newPhotosGetVideosClient struct {
-	grpc.ClientStream
-}
-
-func (x *newPhotosGetVideosClient) Recv() (*GetVideosResponse, error) {
-	m := new(GetVideosResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func (c *newPhotosClient) UploadPhoto(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadPhotoClient, error) {
-	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[2], "/main.NewPhotos/UploadPhoto", opts...)
+	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[1], "/main.NewPhotos/UploadPhoto", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -298,6 +270,47 @@ func (x *newPhotosUploadPhotoClient) CloseAndRecv() (*UploadPhotoResponse, error
 		return nil, err
 	}
 	m := new(UploadPhotoResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *newPhotosClient) GetPhotosNum(ctx context.Context, in *GetPhotosNumRequest, opts ...grpc.CallOption) (*GetPhotosNumResponse, error) {
+	out := new(GetPhotosNumResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetPhotosNum", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *newPhotosClient) GetVideos(ctx context.Context, in *GetVideosRequest, opts ...grpc.CallOption) (NewPhotos_GetVideosClient, error) {
+	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[2], "/main.NewPhotos/GetVideos", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &newPhotosGetVideosClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type NewPhotos_GetVideosClient interface {
+	Recv() (*GetVideosResponse, error)
+	grpc.ClientStream
+}
+
+type newPhotosGetVideosClient struct {
+	grpc.ClientStream
+}
+
+func (x *newPhotosGetVideosClient) Recv() (*GetVideosResponse, error) {
+	m := new(GetVideosResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -336,6 +349,15 @@ func (x *newPhotosUploadVideoClient) CloseAndRecv() (*UploadVideoResponse, error
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *newPhotosClient) GetVideosNum(ctx context.Context, in *GetVideosNumRequest, opts ...grpc.CallOption) (*GetVideosNumResponse, error) {
+	out := new(GetVideosNumResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetVideosNum", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *newPhotosClient) DeleteAccount(ctx context.Context, in *DeleteAccountRequest, opts ...grpc.CallOption) (*DeleteAccountResponse, error) {
@@ -470,6 +492,15 @@ func (x *newPhotosGetAlbumsClient) Recv() (*GetAlbumsResponse, error) {
 	return m, nil
 }
 
+func (c *newPhotosClient) GetAlbumsNum(ctx context.Context, in *GetAlbumsNumRequest, opts ...grpc.CallOption) (*GetAlbumsNumResponse, error) {
+	out := new(GetAlbumsNumResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetAlbumsNum", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *newPhotosClient) CreateAlbum(ctx context.Context, in *CreateAlbumRequest, opts ...grpc.CallOption) (*CreateAlbumResponse, error) {
 	out := new(CreateAlbumResponse)
 	err := c.cc.Invoke(ctx, "/main.NewPhotos/CreateAlbum", in, out, opts...)
@@ -522,6 +553,15 @@ func (x *newPhotosUploadPhotoToAlbumClient) CloseAndRecv() (*UploadPhotoToAlbumR
 	return m, nil
 }
 
+func (c *newPhotosClient) GetPhotosInAlbumNum(ctx context.Context, in *GetPhotosInAlbumNumRequest, opts ...grpc.CallOption) (*GetPhotosInAlbumNumResponse, error) {
+	out := new(GetPhotosInAlbumNumResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetPhotosInAlbumNum", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *newPhotosClient) UploadVideoToAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_UploadVideoToAlbumClient, error) {
 	stream, err := c.cc.NewStream(ctx, &NewPhotos_ServiceDesc.Streams[8], "/main.NewPhotos/UploadVideoToAlbum", opts...)
 	if err != nil {
@@ -554,6 +594,15 @@ func (x *newPhotosUploadVideoToAlbumClient) CloseAndRecv() (*UploadVideoToAlbumR
 		return nil, err
 	}
 	return m, nil
+}
+
+func (c *newPhotosClient) GetVideosInAlbumNum(ctx context.Context, in *GetVideosInAlbumNumRequest, opts ...grpc.CallOption) (*GetVideosInAlbumNumResponse, error) {
+	out := new(GetVideosInAlbumNumResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetVideosInAlbumNum", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *newPhotosClient) DeletePhotoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeletePhotoFromAlbumClient, error) {
@@ -624,15 +673,6 @@ func (x *newPhotosDeleteVideoFromAlbumClient) CloseAndRecv() (*DeleteVideoFromAl
 	return m, nil
 }
 
-func (c *newPhotosClient) GetAlbumInfo(ctx context.Context, in *GetAlbumInfoRequest, opts ...grpc.CallOption) (*GetAlbumInfoResponse, error) {
-	out := new(GetAlbumInfoResponse)
-	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetAlbumInfo", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *newPhotosClient) Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error) {
 	out := new(PingResponse)
 	err := c.cc.Invoke(ctx, "/main.NewPhotos/Ping", in, out, opts...)
@@ -656,9 +696,11 @@ func (c *newPhotosClient) GetFullPhotoByThumbnail(ctx context.Context, in *GetFu
 // for forward compatibility
 type NewPhotosServer interface {
 	GetPhotos(*GetPhotosRequest, NewPhotos_GetPhotosServer) error
-	GetVideos(*GetVideosRequest, NewPhotos_GetVideosServer) error
 	UploadPhoto(NewPhotos_UploadPhotoServer) error
+	GetPhotosNum(context.Context, *GetPhotosNumRequest) (*GetPhotosNumResponse, error)
+	GetVideos(*GetVideosRequest, NewPhotos_GetVideosServer) error
 	UploadVideo(NewPhotos_UploadVideoServer) error
+	GetVideosNum(context.Context, *GetVideosNumRequest) (*GetVideosNumResponse, error)
 	DeleteAccount(context.Context, *DeleteAccountRequest) (*DeleteAccountResponse, error)
 	GetUserinfo(context.Context, *GetUserinfoRequest) (*GetUserinfoResponse, error)
 	GetUserAvatar(context.Context, *GetUserAvatarRequest) (*GetUserAvatarResponse, error)
@@ -666,13 +708,15 @@ type NewPhotosServer interface {
 	GetPhotosFromAlbum(*GetPhotosFromAlbumRequest, NewPhotos_GetPhotosFromAlbumServer) error
 	GetVideosFromAlbum(*GetVideosFromAlbumRequest, NewPhotos_GetVideosFromAlbumServer) error
 	GetAlbums(*GetAlbumsRequest, NewPhotos_GetAlbumsServer) error
+	GetAlbumsNum(context.Context, *GetAlbumsNumRequest) (*GetAlbumsNumResponse, error)
 	CreateAlbum(context.Context, *CreateAlbumRequest) (*CreateAlbumResponse, error)
 	DeleteAlbum(context.Context, *DeleteAlbumRequest) (*DeleteAlbumResponse, error)
 	UploadPhotoToAlbum(NewPhotos_UploadPhotoToAlbumServer) error
+	GetPhotosInAlbumNum(context.Context, *GetPhotosInAlbumNumRequest) (*GetPhotosInAlbumNumResponse, error)
 	UploadVideoToAlbum(NewPhotos_UploadVideoToAlbumServer) error
+	GetVideosInAlbumNum(context.Context, *GetVideosInAlbumNumRequest) (*GetVideosInAlbumNumResponse, error)
 	DeletePhotoFromAlbum(NewPhotos_DeletePhotoFromAlbumServer) error
 	DeleteVideoFromAlbum(NewPhotos_DeleteVideoFromAlbumServer) error
-	GetAlbumInfo(context.Context, *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error)
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
 	GetFullPhotoByThumbnail(context.Context, *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error)
 	mustEmbedUnimplementedNewPhotosServer()
@@ -685,14 +729,20 @@ type UnimplementedNewPhotosServer struct {
 func (UnimplementedNewPhotosServer) GetPhotos(*GetPhotosRequest, NewPhotos_GetPhotosServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetPhotos not implemented")
 }
-func (UnimplementedNewPhotosServer) GetVideos(*GetVideosRequest, NewPhotos_GetVideosServer) error {
-	return status.Errorf(codes.Unimplemented, "method GetVideos not implemented")
-}
 func (UnimplementedNewPhotosServer) UploadPhoto(NewPhotos_UploadPhotoServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadPhoto not implemented")
 }
+func (UnimplementedNewPhotosServer) GetPhotosNum(context.Context, *GetPhotosNumRequest) (*GetPhotosNumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPhotosNum not implemented")
+}
+func (UnimplementedNewPhotosServer) GetVideos(*GetVideosRequest, NewPhotos_GetVideosServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetVideos not implemented")
+}
 func (UnimplementedNewPhotosServer) UploadVideo(NewPhotos_UploadVideoServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadVideo not implemented")
+}
+func (UnimplementedNewPhotosServer) GetVideosNum(context.Context, *GetVideosNumRequest) (*GetVideosNumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVideosNum not implemented")
 }
 func (UnimplementedNewPhotosServer) DeleteAccount(context.Context, *DeleteAccountRequest) (*DeleteAccountResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteAccount not implemented")
@@ -715,6 +765,9 @@ func (UnimplementedNewPhotosServer) GetVideosFromAlbum(*GetVideosFromAlbumReques
 func (UnimplementedNewPhotosServer) GetAlbums(*GetAlbumsRequest, NewPhotos_GetAlbumsServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetAlbums not implemented")
 }
+func (UnimplementedNewPhotosServer) GetAlbumsNum(context.Context, *GetAlbumsNumRequest) (*GetAlbumsNumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetAlbumsNum not implemented")
+}
 func (UnimplementedNewPhotosServer) CreateAlbum(context.Context, *CreateAlbumRequest) (*CreateAlbumResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateAlbum not implemented")
 }
@@ -724,17 +777,20 @@ func (UnimplementedNewPhotosServer) DeleteAlbum(context.Context, *DeleteAlbumReq
 func (UnimplementedNewPhotosServer) UploadPhotoToAlbum(NewPhotos_UploadPhotoToAlbumServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadPhotoToAlbum not implemented")
 }
+func (UnimplementedNewPhotosServer) GetPhotosInAlbumNum(context.Context, *GetPhotosInAlbumNumRequest) (*GetPhotosInAlbumNumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPhotosInAlbumNum not implemented")
+}
 func (UnimplementedNewPhotosServer) UploadVideoToAlbum(NewPhotos_UploadVideoToAlbumServer) error {
 	return status.Errorf(codes.Unimplemented, "method UploadVideoToAlbum not implemented")
+}
+func (UnimplementedNewPhotosServer) GetVideosInAlbumNum(context.Context, *GetVideosInAlbumNumRequest) (*GetVideosInAlbumNumResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetVideosInAlbumNum not implemented")
 }
 func (UnimplementedNewPhotosServer) DeletePhotoFromAlbum(NewPhotos_DeletePhotoFromAlbumServer) error {
 	return status.Errorf(codes.Unimplemented, "method DeletePhotoFromAlbum not implemented")
 }
 func (UnimplementedNewPhotosServer) DeleteVideoFromAlbum(NewPhotos_DeleteVideoFromAlbumServer) error {
 	return status.Errorf(codes.Unimplemented, "method DeleteVideoFromAlbum not implemented")
-}
-func (UnimplementedNewPhotosServer) GetAlbumInfo(context.Context, *GetAlbumInfoRequest) (*GetAlbumInfoResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetAlbumInfo not implemented")
 }
 func (UnimplementedNewPhotosServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
@@ -776,27 +832,6 @@ func (x *newPhotosGetPhotosServer) Send(m *GetPhotosResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _NewPhotos_GetVideos_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(GetVideosRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(NewPhotosServer).GetVideos(m, &newPhotosGetVideosServer{stream})
-}
-
-type NewPhotos_GetVideosServer interface {
-	Send(*GetVideosResponse) error
-	grpc.ServerStream
-}
-
-type newPhotosGetVideosServer struct {
-	grpc.ServerStream
-}
-
-func (x *newPhotosGetVideosServer) Send(m *GetVideosResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
 func _NewPhotos_UploadPhoto_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(NewPhotosServer).UploadPhoto(&newPhotosUploadPhotoServer{stream})
 }
@@ -823,6 +858,45 @@ func (x *newPhotosUploadPhotoServer) Recv() (*UploadPhotoRequest, error) {
 	return m, nil
 }
 
+func _NewPhotos_GetPhotosNum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPhotosNumRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).GetPhotosNum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/GetPhotosNum",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).GetPhotosNum(ctx, req.(*GetPhotosNumRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NewPhotos_GetVideos_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetVideosRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(NewPhotosServer).GetVideos(m, &newPhotosGetVideosServer{stream})
+}
+
+type NewPhotos_GetVideosServer interface {
+	Send(*GetVideosResponse) error
+	grpc.ServerStream
+}
+
+type newPhotosGetVideosServer struct {
+	grpc.ServerStream
+}
+
+func (x *newPhotosGetVideosServer) Send(m *GetVideosResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _NewPhotos_UploadVideo_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(NewPhotosServer).UploadVideo(&newPhotosUploadVideoServer{stream})
 }
@@ -847,6 +921,24 @@ func (x *newPhotosUploadVideoServer) Recv() (*UploadVideoRequest, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func _NewPhotos_GetVideosNum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetVideosNumRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).GetVideosNum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/GetVideosNum",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).GetVideosNum(ctx, req.(*GetVideosNumRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _NewPhotos_DeleteAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -984,6 +1076,24 @@ func (x *newPhotosGetAlbumsServer) Send(m *GetAlbumsResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _NewPhotos_GetAlbumsNum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetAlbumsNumRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).GetAlbumsNum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/GetAlbumsNum",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).GetAlbumsNum(ctx, req.(*GetAlbumsNumRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _NewPhotos_CreateAlbum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateAlbumRequest)
 	if err := dec(in); err != nil {
@@ -1046,6 +1156,24 @@ func (x *newPhotosUploadPhotoToAlbumServer) Recv() (*UploadPhotoToAlbumRequest, 
 	return m, nil
 }
 
+func _NewPhotos_GetPhotosInAlbumNum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPhotosInAlbumNumRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).GetPhotosInAlbumNum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/GetPhotosInAlbumNum",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).GetPhotosInAlbumNum(ctx, req.(*GetPhotosInAlbumNumRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _NewPhotos_UploadVideoToAlbum_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(NewPhotosServer).UploadVideoToAlbum(&newPhotosUploadVideoToAlbumServer{stream})
 }
@@ -1070,6 +1198,24 @@ func (x *newPhotosUploadVideoToAlbumServer) Recv() (*UploadVideoToAlbumRequest, 
 		return nil, err
 	}
 	return m, nil
+}
+
+func _NewPhotos_GetVideosInAlbumNum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetVideosInAlbumNumRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NewPhotosServer).GetVideosInAlbumNum(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.NewPhotos/GetVideosInAlbumNum",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NewPhotosServer).GetVideosInAlbumNum(ctx, req.(*GetVideosInAlbumNumRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _NewPhotos_DeletePhotoFromAlbum_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -1124,24 +1270,6 @@ func (x *newPhotosDeleteVideoFromAlbumServer) Recv() (*DeleteVideoFromAlbumReque
 	return m, nil
 }
 
-func _NewPhotos_GetAlbumInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetAlbumInfoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NewPhotosServer).GetAlbumInfo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/main.NewPhotos/GetAlbumInfo",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NewPhotosServer).GetAlbumInfo(ctx, req.(*GetAlbumInfoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _NewPhotos_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PingRequest)
 	if err := dec(in); err != nil {
@@ -1186,6 +1314,14 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*NewPhotosServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "GetPhotosNum",
+			Handler:    _NewPhotos_GetPhotosNum_Handler,
+		},
+		{
+			MethodName: "GetVideosNum",
+			Handler:    _NewPhotos_GetVideosNum_Handler,
+		},
+		{
 			MethodName: "DeleteAccount",
 			Handler:    _NewPhotos_DeleteAccount_Handler,
 		},
@@ -1202,6 +1338,10 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NewPhotos_SetUserAvatar_Handler,
 		},
 		{
+			MethodName: "GetAlbumsNum",
+			Handler:    _NewPhotos_GetAlbumsNum_Handler,
+		},
+		{
 			MethodName: "CreateAlbum",
 			Handler:    _NewPhotos_CreateAlbum_Handler,
 		},
@@ -1210,8 +1350,12 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NewPhotos_DeleteAlbum_Handler,
 		},
 		{
-			MethodName: "GetAlbumInfo",
-			Handler:    _NewPhotos_GetAlbumInfo_Handler,
+			MethodName: "GetPhotosInAlbumNum",
+			Handler:    _NewPhotos_GetPhotosInAlbumNum_Handler,
+		},
+		{
+			MethodName: "GetVideosInAlbumNum",
+			Handler:    _NewPhotos_GetVideosInAlbumNum_Handler,
 		},
 		{
 			MethodName: "Ping",
@@ -1229,14 +1373,14 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "GetVideos",
-			Handler:       _NewPhotos_GetVideos_Handler,
-			ServerStreams: true,
-		},
-		{
 			StreamName:    "UploadPhoto",
 			Handler:       _NewPhotos_UploadPhoto_Handler,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetVideos",
+			Handler:       _NewPhotos_GetVideos_Handler,
+			ServerStreams: true,
 		},
 		{
 			StreamName:    "UploadVideo",
