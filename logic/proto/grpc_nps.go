@@ -26,7 +26,7 @@ func (s *NewPhoto) GetPhotos(r *GetPhotosRequest, stream NewPhotos_GetPhotosServ
 			}
 			converted, ok := result.([]caching.GetPhotosModel)
 			if !ok {
-				log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", err)
+				log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", caching.ErrConverting)
 			}
 			for _, value := range converted {
 				if err := stream.Send(&GetPhotosResponse{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Tags: value.Tags, Ok: true}); err != nil {
@@ -72,7 +72,7 @@ func (s *NewPhoto) GetVideos(r *GetVideosRequest, stream NewPhotos_GetVideosServ
 			}
 			converted, ok := result.([]caching.GetVideosModel)
 			if !ok {
-				log.Logger.UsingErrorLogFile().CFatalln("GetVideos", err)
+				log.Logger.UsingErrorLogFile().CFatalln("GetVideos", caching.ErrConverting)
 			}
 			for _, value := range converted {
 				if err := stream.Send(&GetVideosResponse{Video: value.Video, Ok: true}); err != nil {
@@ -166,7 +166,7 @@ func (s *NewPhoto) GetUserinfo(cxt context.Context, r *GetUserinfoRequest) (*Get
 		}
 		converted, ok := result.(caching.GetUserinfoModel)
 		if !ok {
-			log.Logger.UsingErrorLogFile().CFatalln("GetUserinfo", err)
+			log.Logger.UsingErrorLogFile().CFatalln("GetUserinfo", caching.ErrConverting)
 		}
 
 		return &GetUserinfoResponse{Firstname: converted.Firstname, Secondname: converted.Secondname, Storage: converted.Storage, Ok: true}, nil
@@ -386,29 +386,30 @@ func (s *NewPhoto) Ping(ctx context.Context, r *PingRequest) (*PingResponse, err
 	return &PingResponse{Pong: true}, nil
 }
 
-func (s *NewPhoto) GetFullPhotoByThumbnail(ctx context.Context, r *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error) {
-	log.Logger.UsingAccessLogFile().CInfoln("GetFullPhotoByThumbnail")
+func (s *NewPhoto) GetFullMediaByThumbnail(ctx context.Context, r *GetFullMediaByThumbnailRequest) (*GetFullMediaByThumbnailResponse, error) {
+	log.Logger.UsingAccessLogFile().CInfoln("GetFullMediaByThumbnail")
 
-	if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_PHOTO_BY_THUMBNAIL); cached {
+	if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_MEDIA_BY_THUMBNAIL); cached {
 		definer := caching.NewDefiner()
-		result, err := definer.Define(caching.GET_FULL_PHOTO_BY_THUMBNAIL, cr)
+		result, err := definer.Define(caching.GET_FULL_MEDIA_BY_THUMBNAIL, cr)
 		if err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", err)
 		}
-		converted, ok := result.(caching.GetFullPhotoByThumbnail)
+		converted, ok := result.(caching.GetFullMediaByThumbnail)
 		if !ok {
-			log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", err)
+			log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", caching.ErrConverting)
 		}
 
-		return &GetFullPhotoByThumbnailResponse{Photo: converted.Photo}, nil
+		return &GetFullMediaByThumbnailResponse{Media: converted.Media}, nil
 	}
-	photo := s.DBInstanse.GetFullPhotoByThumbnail(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetThumbnail())
 
-	model := caching.GetFullPhotoByThumbnail{Photo: photo}
+	media := s.DBInstanse.GetFullMediaByThumbnail(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetThumbnail(), &db.MediaSize{Width: 100, Height: 100}, db.MediaType(r.GetMediaType().Number()))
+
+	model := caching.GetFullMediaByThumbnail{Media: media}
 	conf := caching.NewConfigurator()
-	caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_PHOTO_BY_THUMBNAIL, conf.Configure(model))
+	caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_MEDIA_BY_THUMBNAIL, conf.Configure(model))
 
-	return &GetFullPhotoByThumbnailResponse{Photo: photo, Ok: true}, nil
+	return &GetFullMediaByThumbnailResponse{Media: media, Ok: true}, nil
 }
 
 func (s *NewPhoto) mustEmbedUnimplementedNewPhotosServer() {}

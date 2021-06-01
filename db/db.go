@@ -436,12 +436,14 @@ func (d *DB) GetAlbumsNum(userid string) int64 {
 	return num
 }
 
-func (d *DB) GetFullPhotoByThumbnail(userid string, thumbnail []byte) []byte {
-	var photo []byte
-	if err := d.db.Get(&photo, "SELECT photo FROM photos WHERE userid = $1 AND thumbnail = $2", userid, thumbnail); err != nil {
+func (d *DB) GetFullMediaByThumbnail(userid string, thumbnail []byte, mediaSize IMediaSize, mediaType IMediaType) []byte {
+	r, t := mediaType.GetScanData()
+
+	var media []byte
+	if err := d.db.Get(&media, "SELECT $1 FROM $2 WHERE userid = $3 AND thumbnail = $4", r, t, userid, thumbnail); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", err)
 	}
-	return photo
+	return media
 }
 
 func New() *DB {

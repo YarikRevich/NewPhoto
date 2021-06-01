@@ -120,7 +120,7 @@ service NewPhotos {
 
     rpc Ping(PingRequest)returns(PingResponse);
 
-    rpc  GetFullPhotoByThumbnail(GetFullPhotoByThumbnailRequest) returns (GetFullPhotoByThumbnailResponse);
+    rpc  GetFullMediaByThumbnail(GetFullMediaByThumbnailRequest) returns (GetFullMediaByThumbnailResponse);
 }
 
 
@@ -395,14 +395,20 @@ message PingResponse{
     bool pong = 1;
 }
 
-message GetFullPhotoByThumbnailRequest {
+enum MediaType {
+    Photo = 0;
+    Video = 1;
+}
+
+message GetFullMediaByThumbnailRequest {
     string access_token = 1;
     string login_token = 2;
     bytes thumbnail = 3;
+    MediaType media_type = 4;
 }
 
-message GetFullPhotoByThumbnailResponse {
-    bytes photo = 1;
+message GetFullMediaByThumbnailResponse {
+    bytes media = 1;
     bool ok = 2;
 }
 
