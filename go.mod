@@ -1,4 +1,4 @@
-module NewPhoto
+module github.com/YarikRevich/NewPhoto
 
 go 1.15
 
