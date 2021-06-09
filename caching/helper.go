@@ -1,7 +1,7 @@
 package caching
 
 import (
-	"NewPhoto/log"
+	"github.com/YarikRevich/NewPhoto/log"
 	"encoding/json"
 	"errors"
 )
@@ -13,7 +13,9 @@ const (
 	GET_VIDEOS_FROM_ALBUM       = "GetVideosFromAlbum"
 	GET_ALBUMS                  = "GetAlbums"
 	GET_USER_INFO               = "GetUserinfo"
-	GET_FULL_PHOTO_BY_THUMBNAIL = "GetFullPhotoByThumbnail"
+	GET_FULL_MEDIA_BY_THUMBNAIL = "GetFullMediaByThumbnail"
+
+	ErrConverting = "an error happed"
 )
 
 type Definer interface {
@@ -61,9 +63,10 @@ type GetUserinfoModel struct {
 	Storage    float64
 }
 
-type GetFullPhotoByThumbnail struct {
-	Photo []byte
+type GetFullMediaByThumbnail struct {
+	Media []byte
 }
+
 
 func (d *D) Define(c string, args string) (interface{}, error) {
 	// Defines type of command .. then unparses it's values ...
@@ -82,8 +85,8 @@ func (d *D) Define(c string, args string) (interface{}, error) {
 		stat = new([]GetAlbumsModel)
 	case GET_USER_INFO:
 		stat = new(GetUserinfoModel)
-	case GET_FULL_PHOTO_BY_THUMBNAIL:
-		stat = new(GetFullPhotoByThumbnail)
+	case GET_FULL_MEDIA_BY_THUMBNAIL:
+		stat = new(GetFullMediaByThumbnail)
 	}
 	if err := json.Unmarshal([]byte(args), &stat); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CacheDefine", err)

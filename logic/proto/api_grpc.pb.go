@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthenticationClient interface {
 	RegisterUser(ctx context.Context, in *UserRegisterRequest, opts ...grpc.CallOption) (*UserRegisterResponse, error)
 	LoginUser(ctx context.Context, in *UserLoginRequest, opts ...grpc.CallOption) (*UserLoginResponse, error)
+	LogoutUser(ctx context.Context, in *UserLogoutRequest, opts ...grpc.CallOption) (*UserLogoutResponse, error)
 	IsTokenCorrect(ctx context.Context, in *IsTokenCorrectRequest, opts ...grpc.CallOption) (*IsTokenCorrectResponse, error)
 }
 
@@ -49,6 +50,15 @@ func (c *authenticationClient) LoginUser(ctx context.Context, in *UserLoginReque
 	return out, nil
 }
 
+func (c *authenticationClient) LogoutUser(ctx context.Context, in *UserLogoutRequest, opts ...grpc.CallOption) (*UserLogoutResponse, error) {
+	out := new(UserLogoutResponse)
+	err := c.cc.Invoke(ctx, "/main.Authentication/LogoutUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authenticationClient) IsTokenCorrect(ctx context.Context, in *IsTokenCorrectRequest, opts ...grpc.CallOption) (*IsTokenCorrectResponse, error) {
 	out := new(IsTokenCorrectResponse)
 	err := c.cc.Invoke(ctx, "/main.Authentication/IsTokenCorrect", in, out, opts...)
@@ -64,6 +74,7 @@ func (c *authenticationClient) IsTokenCorrect(ctx context.Context, in *IsTokenCo
 type AuthenticationServer interface {
 	RegisterUser(context.Context, *UserRegisterRequest) (*UserRegisterResponse, error)
 	LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error)
+	LogoutUser(context.Context, *UserLogoutRequest) (*UserLogoutResponse, error)
 	IsTokenCorrect(context.Context, *IsTokenCorrectRequest) (*IsTokenCorrectResponse, error)
 	mustEmbedUnimplementedAuthenticationServer()
 }
@@ -77,6 +88,9 @@ func (UnimplementedAuthenticationServer) RegisterUser(context.Context, *UserRegi
 }
 func (UnimplementedAuthenticationServer) LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginUser not implemented")
+}
+func (UnimplementedAuthenticationServer) LogoutUser(context.Context, *UserLogoutRequest) (*UserLogoutResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LogoutUser not implemented")
 }
 func (UnimplementedAuthenticationServer) IsTokenCorrect(context.Context, *IsTokenCorrectRequest) (*IsTokenCorrectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsTokenCorrect not implemented")
@@ -130,6 +144,24 @@ func _Authentication_LoginUser_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Authentication_LogoutUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserLogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServer).LogoutUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.Authentication/LogoutUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServer).LogoutUser(ctx, req.(*UserLogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Authentication_IsTokenCorrect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(IsTokenCorrectRequest)
 	if err := dec(in); err != nil {
@@ -162,6 +194,10 @@ var Authentication_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginUser",
 			Handler:    _Authentication_LoginUser_Handler,
+		},
+		{
+			MethodName: "LogoutUser",
+			Handler:    _Authentication_LogoutUser_Handler,
 		},
 		{
 			MethodName: "IsTokenCorrect",
@@ -199,7 +235,7 @@ type NewPhotosClient interface {
 	DeletePhotoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeletePhotoFromAlbumClient, error)
 	DeleteVideoFromAlbum(ctx context.Context, opts ...grpc.CallOption) (NewPhotos_DeleteVideoFromAlbumClient, error)
 	Ping(ctx context.Context, in *PingRequest, opts ...grpc.CallOption) (*PingResponse, error)
-	GetFullPhotoByThumbnail(ctx context.Context, in *GetFullPhotoByThumbnailRequest, opts ...grpc.CallOption) (*GetFullPhotoByThumbnailResponse, error)
+	GetFullMediaByThumbnail(ctx context.Context, in *GetFullMediaByThumbnailRequest, opts ...grpc.CallOption) (*GetFullMediaByThumbnailResponse, error)
 }
 
 type newPhotosClient struct {
@@ -682,9 +718,9 @@ func (c *newPhotosClient) Ping(ctx context.Context, in *PingRequest, opts ...grp
 	return out, nil
 }
 
-func (c *newPhotosClient) GetFullPhotoByThumbnail(ctx context.Context, in *GetFullPhotoByThumbnailRequest, opts ...grpc.CallOption) (*GetFullPhotoByThumbnailResponse, error) {
-	out := new(GetFullPhotoByThumbnailResponse)
-	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetFullPhotoByThumbnail", in, out, opts...)
+func (c *newPhotosClient) GetFullMediaByThumbnail(ctx context.Context, in *GetFullMediaByThumbnailRequest, opts ...grpc.CallOption) (*GetFullMediaByThumbnailResponse, error) {
+	out := new(GetFullMediaByThumbnailResponse)
+	err := c.cc.Invoke(ctx, "/main.NewPhotos/GetFullMediaByThumbnail", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -718,7 +754,7 @@ type NewPhotosServer interface {
 	DeletePhotoFromAlbum(NewPhotos_DeletePhotoFromAlbumServer) error
 	DeleteVideoFromAlbum(NewPhotos_DeleteVideoFromAlbumServer) error
 	Ping(context.Context, *PingRequest) (*PingResponse, error)
-	GetFullPhotoByThumbnail(context.Context, *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error)
+	GetFullMediaByThumbnail(context.Context, *GetFullMediaByThumbnailRequest) (*GetFullMediaByThumbnailResponse, error)
 	mustEmbedUnimplementedNewPhotosServer()
 }
 
@@ -795,8 +831,8 @@ func (UnimplementedNewPhotosServer) DeleteVideoFromAlbum(NewPhotos_DeleteVideoFr
 func (UnimplementedNewPhotosServer) Ping(context.Context, *PingRequest) (*PingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedNewPhotosServer) GetFullPhotoByThumbnail(context.Context, *GetFullPhotoByThumbnailRequest) (*GetFullPhotoByThumbnailResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetFullPhotoByThumbnail not implemented")
+func (UnimplementedNewPhotosServer) GetFullMediaByThumbnail(context.Context, *GetFullMediaByThumbnailRequest) (*GetFullMediaByThumbnailResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetFullMediaByThumbnail not implemented")
 }
 func (UnimplementedNewPhotosServer) mustEmbedUnimplementedNewPhotosServer() {}
 
@@ -1288,20 +1324,20 @@ func _NewPhotos_Ping_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NewPhotos_GetFullPhotoByThumbnail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetFullPhotoByThumbnailRequest)
+func _NewPhotos_GetFullMediaByThumbnail_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetFullMediaByThumbnailRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NewPhotosServer).GetFullPhotoByThumbnail(ctx, in)
+		return srv.(NewPhotosServer).GetFullMediaByThumbnail(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/main.NewPhotos/GetFullPhotoByThumbnail",
+		FullMethod: "/main.NewPhotos/GetFullMediaByThumbnail",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NewPhotosServer).GetFullPhotoByThumbnail(ctx, req.(*GetFullPhotoByThumbnailRequest))
+		return srv.(NewPhotosServer).GetFullMediaByThumbnail(ctx, req.(*GetFullMediaByThumbnailRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1362,8 +1398,8 @@ var NewPhotos_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NewPhotos_Ping_Handler,
 		},
 		{
-			MethodName: "GetFullPhotoByThumbnail",
-			Handler:    _NewPhotos_GetFullPhotoByThumbnail_Handler,
+			MethodName: "GetFullMediaByThumbnail",
+			Handler:    _NewPhotos_GetFullMediaByThumbnail_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

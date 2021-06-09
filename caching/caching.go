@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"NewPhoto/log"
+	"github.com/YarikRevich/NewPhoto/log"
 	"github.com/go-redis/redis/v8"
 )
 

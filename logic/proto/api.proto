@@ -4,12 +4,21 @@ package main;
 
 option go_package = "logic/proto";
 
+enum SourceType {
+    Web = 0;
+    Mobile = 1;
+}
+
+enum MediaType {
+    Photo = 0;
+    Video = 1;
+}
 
 service Authentication {
     rpc RegisterUser(UserRegisterRequest) returns (UserRegisterResponse);
     rpc LoginUser(UserLoginRequest) returns (UserLoginResponse);
+    rpc LogoutUser(UserLogoutRequest) returns (UserLogoutResponse);
     rpc IsTokenCorrect(IsTokenCorrectRequest) returns (IsTokenCorrectResponse);
-    // rpc RetrieveToken(RetrieveTokenRequest) returns (RetrieveTokenResponse);
 } 
 
 
@@ -18,7 +27,7 @@ message UserRegisterRequest{
     string password = 2;
     string firstname = 3;
     string secondname = 4;
-    string source_type = 5;
+    SourceType source_type = 5;
 }
 
 message UserRegisterResponse{
@@ -28,7 +37,7 @@ message UserRegisterResponse{
 message UserLoginRequest{
     string login = 1;
     string password = 2;
-    string source_type = 5;
+    SourceType source_type = 3;
 }
 
 message UserLoginResponse{
@@ -37,10 +46,20 @@ message UserLoginResponse{
     bool ok = 3;
 }
 
+message UserLogoutRequest{
+    string access_token = 1;
+    string login_token = 2;
+    SourceType source_type = 3;
+}
+
+message UserLogoutResponse {
+    bool ok = 1;
+}
+
 message IsTokenCorrectRequest{
     string access_token = 1;
     string login_token = 2;
-    string source_type = 3;
+    SourceType source_type = 3;
 }
 
 message IsTokenCorrectResponse{
@@ -50,7 +69,7 @@ message IsTokenCorrectResponse{
 message RetrieveTokenRequest{
     string access_token = 1;
     string login_token = 2;
-    string source_type = 3;
+    SourceType source_type = 3;
 }
 
 message RetrieveTokenResponse { 
@@ -120,7 +139,7 @@ service NewPhotos {
 
     rpc Ping(PingRequest)returns(PingResponse);
 
-    rpc  GetFullPhotoByThumbnail(GetFullPhotoByThumbnailRequest) returns (GetFullPhotoByThumbnailResponse);
+    rpc  GetFullMediaByThumbnail(GetFullMediaByThumbnailRequest) returns (GetFullMediaByThumbnailResponse);
 }
 
 
@@ -395,14 +414,15 @@ message PingResponse{
     bool pong = 1;
 }
 
-message GetFullPhotoByThumbnailRequest {
+message GetFullMediaByThumbnailRequest {
     string access_token = 1;
     string login_token = 2;
     bytes thumbnail = 3;
+    MediaType media_type = 4;
 }
 
-message GetFullPhotoByThumbnailResponse {
-    bytes photo = 1;
+message GetFullMediaByThumbnailResponse {
+    bytes media = 1;
     bool ok = 2;
 }
 
