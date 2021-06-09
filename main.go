@@ -1,7 +1,7 @@
 package main
 
 import (
-	"NewPhoto/logic/server"
+	"github.com/YarikRevich/NewPhoto/logic/server"
 )
 
 func main() {

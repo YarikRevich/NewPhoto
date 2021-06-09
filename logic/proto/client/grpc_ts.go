@@ -1,7 +1,7 @@
 package client
 
 import (
-	"NewPhoto/logic/proto"
+	"github.com/YarikRevich/NewPhoto/logic/proto"
 	"log"
 	"os"
 

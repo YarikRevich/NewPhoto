@@ -2,6 +2,29 @@ package db
 
 import "google.golang.org/protobuf/reflect/protoreflect"
 
+const (
+	Web = iota
+	Mobile
+)
+
+type ISourceType interface {
+	//Gets the opportunity to get source type(enum)
+
+	GetScanData() string
+}
+
+type SourceType protoreflect.EnumNumber
+
+func (s SourceType) GetScanData() string {
+	switch s {
+	case Web:
+		return "web"
+	case Mobile:
+		return "mobile"
+	}
+	return ""
+}
+
 type IMediaSize interface {
 	//Implements the methods to get the with and height
 	//of the passed media
@@ -55,14 +78,14 @@ type Service interface {
 type Auth interface {
 	//Checks if user's cred are ok and then
 	//Returns his tokens
-	Login(login, pass, sourceType string) (string, string, error)
+	Login(login, pass string, sourceType ISourceType) (string, string, error)
 
 	//Logouts user and then removes tokens
-	Logout(userid, sourceType string) error
+	Logout(userid string, sourceType ISourceType) error
 
 	//Gets accessToken and loginToken. Then checks them
 	//If it is ok it returns ok status and new tokens
-	IsTokenCorrect(accessToken, loginToken, sourceType string) bool
+	IsTokenCorrect(accessToken, loginToken string, sourceType ISourceType) bool
 
 	//Gets userID using accessToken and loginToken
 	GetUserID(accessToken, loginToken string) string

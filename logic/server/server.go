@@ -1,8 +1,8 @@
 package server
 
 import (
-	"NewPhoto/log"
-	"NewPhoto/logic/proto"
+	"github.com/YarikRevich/NewPhoto/log"
+	"github.com/YarikRevich/NewPhoto/logic/proto"
 
 	"net"
 	"os"

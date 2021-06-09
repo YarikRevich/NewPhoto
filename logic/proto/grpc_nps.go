@@ -1,9 +1,9 @@
 package proto
 
 import (
-	"NewPhoto/caching"
-	"NewPhoto/db"
-	"NewPhoto/log"
+	"github.com/YarikRevich/NewPhoto/caching"
+	"github.com/YarikRevich/NewPhoto/db"
+	"github.com/YarikRevich/NewPhoto/log"
 	"context"
 )
 
@@ -24,11 +24,11 @@ func (s *NewPhoto) GetPhotos(r *GetPhotosRequest, stream NewPhotos_GetPhotosServ
 			if err != nil {
 				log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", err)
 			}
-			converted, ok := result.([]caching.GetPhotosModel)
+			converted, ok := result.(*[]caching.GetPhotosModel)
 			if !ok {
 				log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", caching.ErrConverting)
 			}
-			for _, value := range converted {
+			for _, value := range *converted {
 				if err := stream.Send(&GetPhotosResponse{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Tags: value.Tags, Ok: true}); err != nil {
 					continue
 				}

@@ -1,7 +1,7 @@
 package caching
 
 import (
-	"NewPhoto/log"
+	"github.com/YarikRevich/NewPhoto/log"
 	"encoding/json"
 	"errors"
 )
@@ -66,6 +66,7 @@ type GetUserinfoModel struct {
 type GetFullMediaByThumbnail struct {
 	Media []byte
 }
+
 
 func (d *D) Define(c string, args string) (interface{}, error) {
 	// Defines type of command .. then unparses it's values ...

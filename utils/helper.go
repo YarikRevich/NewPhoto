@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"NewPhoto/log"
+	"github.com/YarikRevich/NewPhoto/log"
 	"encoding/hex"
 )
 

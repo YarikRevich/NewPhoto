@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type AuthenticationClient interface {
 	RegisterUser(ctx context.Context, in *UserRegisterRequest, opts ...grpc.CallOption) (*UserRegisterResponse, error)
 	LoginUser(ctx context.Context, in *UserLoginRequest, opts ...grpc.CallOption) (*UserLoginResponse, error)
+	LogoutUser(ctx context.Context, in *UserLogoutRequest, opts ...grpc.CallOption) (*UserLogoutResponse, error)
 	IsTokenCorrect(ctx context.Context, in *IsTokenCorrectRequest, opts ...grpc.CallOption) (*IsTokenCorrectResponse, error)
 }
 
@@ -49,6 +50,15 @@ func (c *authenticationClient) LoginUser(ctx context.Context, in *UserLoginReque
 	return out, nil
 }
 
+func (c *authenticationClient) LogoutUser(ctx context.Context, in *UserLogoutRequest, opts ...grpc.CallOption) (*UserLogoutResponse, error) {
+	out := new(UserLogoutResponse)
+	err := c.cc.Invoke(ctx, "/main.Authentication/LogoutUser", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authenticationClient) IsTokenCorrect(ctx context.Context, in *IsTokenCorrectRequest, opts ...grpc.CallOption) (*IsTokenCorrectResponse, error) {
 	out := new(IsTokenCorrectResponse)
 	err := c.cc.Invoke(ctx, "/main.Authentication/IsTokenCorrect", in, out, opts...)
@@ -64,6 +74,7 @@ func (c *authenticationClient) IsTokenCorrect(ctx context.Context, in *IsTokenCo
 type AuthenticationServer interface {
 	RegisterUser(context.Context, *UserRegisterRequest) (*UserRegisterResponse, error)
 	LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error)
+	LogoutUser(context.Context, *UserLogoutRequest) (*UserLogoutResponse, error)
 	IsTokenCorrect(context.Context, *IsTokenCorrectRequest) (*IsTokenCorrectResponse, error)
 	mustEmbedUnimplementedAuthenticationServer()
 }
@@ -77,6 +88,9 @@ func (UnimplementedAuthenticationServer) RegisterUser(context.Context, *UserRegi
 }
 func (UnimplementedAuthenticationServer) LoginUser(context.Context, *UserLoginRequest) (*UserLoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginUser not implemented")
+}
+func (UnimplementedAuthenticationServer) LogoutUser(context.Context, *UserLogoutRequest) (*UserLogoutResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LogoutUser not implemented")
 }
 func (UnimplementedAuthenticationServer) IsTokenCorrect(context.Context, *IsTokenCorrectRequest) (*IsTokenCorrectResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IsTokenCorrect not implemented")
@@ -130,6 +144,24 @@ func _Authentication_LoginUser_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Authentication_LogoutUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UserLogoutRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthenticationServer).LogoutUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/main.Authentication/LogoutUser",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthenticationServer).LogoutUser(ctx, req.(*UserLogoutRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Authentication_IsTokenCorrect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(IsTokenCorrectRequest)
 	if err := dec(in); err != nil {
@@ -162,6 +194,10 @@ var Authentication_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginUser",
 			Handler:    _Authentication_LoginUser_Handler,
+		},
+		{
+			MethodName: "LogoutUser",
+			Handler:    _Authentication_LogoutUser_Handler,
 		},
 		{
 			MethodName: "IsTokenCorrect",
