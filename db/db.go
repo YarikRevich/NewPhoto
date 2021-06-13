@@ -79,7 +79,7 @@ func (d *DB) CreateTables() {
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid text, video bytea, extension text, size float8, album text[], FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid text, video bytea, thumbnail bytea, extension text, size float8, album text[], FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
@@ -204,10 +204,13 @@ func (d *DB) GetPhotosNum(userid string) int64 {
 	return num
 }
 
-func (d *DB) GetVideos(userid string) []GetVideosModel {
+func (d *DB) GetVideos(userid string, offset, page int64) []GetVideosModel {
 	r := []GetVideosModel{}
-	if err := d.db.Select(&r, "SELECT video FROM videos WHERE userid = $1", userid); err != nil {
+	if err := d.db.Select(&r, "SELECT thumbnail FROM videos WHERE userid = $1", userid); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetVideos", err)
+	}
+	if int64(len(r)) >= (page-1)*offset+offset {
+		return r[(page-1)*offset : (page-1)*offset+offset]
 	}
 	return r
 }
@@ -224,8 +227,8 @@ func (d *DB) UploadPhoto(userid string, photo, thumbnail []byte, extension strin
 	d.db.MustExec("INSERT INTO photos (userid, photo, thumbnail, extension, size, tags) VALUES ($1, $2, $3, $4, $5, $6)", userid, photo, thumbnail, extension, size, pq.Array(tags))
 }
 
-func (d *DB) UploadVideo(userid, extension string, video []byte, size float64) {
-	d.db.MustExec("INSERT INTO videos (userid, video, extension, size) VALUES ($1, $2, $3, $4)", userid, video, extension, size)
+func (d *DB) UploadVideo(userid, extension string, video, thumbnail []byte, size float64) {
+	d.db.MustExec("INSERT INTO videos (userid, video, thumbnail, extension, size) VALUES ($1, $2, $3, $4, $5)", userid, video, thumbnail, extension, size)
 }
 
 func (d *DB) DeleteAccount(userid string) {
@@ -303,7 +306,7 @@ func (d *DB) GetAlbums(userid string) []GetAlbumsModel {
 
 func (d *DB) GetPhotosFromAlbum(userid, name string, offset, page int64) []GetPhotosFromAlbumModel {
 	r := []GetPhotosFromAlbumModel{}
-	if err := d.db.Select(&r, `SELECT userid, photo, thumbnail, extension, size, album FROM photos WHERE userid = $1 AND $2=ANY(album)`, userid, name); err != nil {
+	if err := d.db.Select(&r, `SELECT userid, thumbnail, extension, size, album FROM photos WHERE userid = $1 AND $2=ANY(album)`, userid, name); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetPhotosFromAlbum", err)
 	}
 	if int64(len(r)) >= (page-1)*offset+offset {
@@ -366,8 +369,18 @@ func (d *DB) CreateAlbum(userid, name string) bool {
 }
 
 func (d *DB) DeleteAlbum(userid, album string) bool {
+	t, err := d.db.Begin()
+	if err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("DeleteAlbum", err)
+	}
+	defer func() {
+		if err := t.Commit(); err != nil {
+			log.Logger.UsingErrorLogFile().CFatalln("DeleteAlbum", err)
+		}
+	}()
 	d.db.MustExec("DELETE FROM albums WHERE userid = $1 AND name = $2", userid, album)
 	d.db.MustExec("UPDATE photos videos set album = array_remove(album, $1) WHERE userid = $2", album, userid)
+
 	return true
 }
 
@@ -391,8 +404,8 @@ func (d *DB) GetFullMediaByThumbnail(userid string, thumbnail []byte, mediaSize 
 	r, t := mediaType.GetScanData()
 
 	var media []byte
-	if err := d.db.Get(&media, "SELECT $1 FROM $2 WHERE userid = $3 AND thumbnail = $4", r, t, userid, thumbnail); err != nil {
-		log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", err)
+	if err := d.db.Get(&media, fmt.Sprintf("SELECT %s FROM %s WHERE userid = $1 AND thumbnail = $2", r, t), userid, thumbnail); err != nil {
+		log.Logger.UsingErrorLogFile().CFatalln("GetFullMediaByThumbnail", err)
 	}
 	return media
 }

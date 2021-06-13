@@ -12,7 +12,6 @@ type GetAlbumsModel struct {
 //Parses the result from GetPhotosFromAlbum request
 type GetPhotosFromAlbumModel struct {
 	Userid    string         `db:"userid"`
-	Photo     []byte         `db:"photo"`
 	Thumbnail []byte         `db:"thumbnail"`
 	Extension string         `db:"extension"`
 	Size      float64        `db:"size"`
@@ -36,5 +35,5 @@ type GetPhotosModel struct {
 
 //Parses the result from GetVideos request
 type GetVideosModel struct {
-	Video []byte `db:"video"`
+	Thumbnail []byte `db:"thumbnail"`
 }

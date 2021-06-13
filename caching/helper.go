@@ -1,9 +1,9 @@
 package caching
 
 import (
-	"github.com/YarikRevich/NewPhoto/log"
 	"encoding/json"
 	"errors"
+	"github.com/YarikRevich/NewPhoto/log"
 )
 
 const (
@@ -33,7 +33,7 @@ type GetPhotosModel struct {
 }
 
 type GetVideosModel struct {
-	Video []byte
+	Thumbnail []byte
 }
 
 type GetPhotosFromAlbum struct {
@@ -66,7 +66,6 @@ type GetUserinfoModel struct {
 type GetFullMediaByThumbnail struct {
 	Media []byte
 }
-
 
 func (d *D) Define(c string, args string) (interface{}, error) {
 	// Defines type of command .. then unparses it's values ...

@@ -164,10 +164,12 @@ message GetPhotosResponse {
 message GetVideosRequest {
     string access_token = 1;
     string login_token = 2;
+    int64 offset = 3;
+    int64 page = 4;
 }
 
 message GetVideosResponse {
-    bytes video = 1;
+    bytes thumbnail = 1;
     bool ok = 2;
 }
 
@@ -199,8 +201,9 @@ message UploadVideoRequest {
     string access_token = 1;
     string login_token = 2;
     bytes video = 3;
-    string extension = 4;
-    double size = 5;
+    bytes thumbnail = 4;
+    string extension = 5;
+    double size = 6;
 }
 
 message UploadVideoResponse {
@@ -271,12 +274,11 @@ message GetPhotosFromAlbumRequest{
 }
 
 message GetPhotosFromAlbumResponse{
-    bytes photo = 1; 
-    bytes thumbnail = 2;
-    string extension = 3;
-    double size = 4;
-    string album = 5;
-    bool ok = 6;
+    bytes thumbnail = 1;
+    string extension = 2;
+    double size = 3;
+    string album = 4;
+    bool ok = 5;
 }
 
 message GetVideosFromAlbumRequest{

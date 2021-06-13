@@ -95,9 +95,9 @@ type Auth interface {
 
 type Home interface {
 	GetPhotos(userid string, offset, page int64) []GetPhotosModel
-	GetVideos(userid string) []GetVideosModel
+	GetVideos(userid string, offset, page int64) []GetVideosModel
 	UploadPhoto(userid string, photo, thumbnail []byte, extension string, size float64, tags []string)
-	UploadVideo(userid, extension string, video []byte, size float64)
+	UploadVideo(userid, extension string, video, thumbnail []byte, size float64)
 }
 
 type Account interface {
