@@ -127,7 +127,7 @@ type Album interface {
 	UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte, tags []string)
 
 	//Uploads video to the album due to the given name
-	UploadVideoToAlbum(userid, extension, album string, video []byte, size float64, tags []string)
+	UploadVideoToAlbum(userid, extension, album string, video, thumbnail []byte, size float64, tags []string)
 
 	//Deletes photo from the album due to the given name
 	DeletePhotoFromAlbum(userid, album string, photo []byte)

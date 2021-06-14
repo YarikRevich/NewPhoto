@@ -310,7 +310,7 @@ func (s *NewPhoto) UploadVideoToAlbum(stream NewPhotos_UploadVideoToAlbumServer)
 			if err != nil {
 				break
 			}
-			s.DBInstanse.UploadVideoToAlbum(s.DBInstanse.GetUserID(recv.GetAccessToken(), recv.GetLoginToken()), recv.GetExtension(), recv.GetAlbum(), recv.GetThumbnail(), recv.GetSize(), []string{})
+			s.DBInstanse.UploadVideoToAlbum(s.DBInstanse.GetUserID(recv.GetAccessToken(), recv.GetLoginToken()), recv.GetExtension(), recv.GetAlbum(), recv.GetVideo(), recv.GetThumbnail(), recv.GetSize(), []string{})
 		}
 		if err := stream.SendAndClose(&UploadVideoToAlbumResponse{Ok: true}); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
@@ -435,7 +435,7 @@ func (s *NewPhoto) GetFullMediaByThumbnail(ctx context.Context, r *GetFullMediaB
 	if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_MEDIA_BY_THUMBNAIL); cached {
 		definer := caching.Definer{Model: caching.GetFullMediaByThumbnail{}, Data: cr}
 		result := definer.Define()
-		converted, ok := result.(caching.GetFullMediaByThumbnail)
+		converted, ok := result.(*caching.GetFullMediaByThumbnail)
 		if !ok {
 			log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", caching.ErrConverting)
 		}

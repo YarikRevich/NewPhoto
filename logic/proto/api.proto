@@ -351,10 +351,11 @@ message GetPhotosInAlbumNumResponse {
 message UploadVideoToAlbumRequest{
     string access_token = 1;
     string login_token = 2;
-    bytes thumbnail = 3;
-    string extension = 4;
-    double size = 5;
-    string album = 6;
+    bytes video = 3;
+    bytes thumbnail = 4;
+    string extension = 5;
+    double size = 6;
+    string album = 7;
 }
 
 message UploadVideoToAlbumResponse{

@@ -306,7 +306,7 @@ func (d *DB) GetAlbums(userid string) []GetAlbumsModel {
 
 func (d *DB) GetPhotosFromAlbum(userid, name string, offset, page int64) []GetPhotosFromAlbumModel {
 	r := []GetPhotosFromAlbumModel{}
-	if err := d.db.Select(&r, `SELECT userid, thumbnail, extension, size, album FROM photos WHERE userid = $1 AND $2=ANY(album)`, userid, name); err != nil {
+	if err := d.db.Select(&r, `SELECT thumbnail, tags FROM photos WHERE userid = $1 AND $2=ANY(album)`, userid, name); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetPhotosFromAlbum", err)
 	}
 	if int64(len(r)) >= (page-1)*offset+offset {
@@ -325,7 +325,7 @@ func (d *DB) GetPhotosInAlbumNum(userid, name string) int64 {
 
 func (d *DB) GetVideosFromAlbum(userid, name string, offset, page int64) []GetVideosFromAlbumModel {
 	r := []GetVideosFromAlbumModel{}
-	if err := d.db.Select(&r, "SELECT video, extension FROM videos WHERE userid = $1 AND $2=ANY(album)", userid, name); err != nil {
+	if err := d.db.Select(&r, "SELECT thumbnail, tags FROM videos WHERE userid = $1 AND $2=ANY(album)", userid, name); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("GetVideosFromAlbum", err)
 	}
 	if int64(len(r)) >= (page-1)*offset+offset {
@@ -348,17 +348,17 @@ func (d *DB) UploadPhotoToAlbum(userid, extension, album string, size float64, p
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadPhotoToAlbum", err)
 	}
-	if _, err := d.db.Exec("UPDATE photos SET album = array_append(album, $1) tags = $2 WHERE userid = $3 AND photo = $4", album, pq.Array(tags), userid, photo); err != nil {
+	if _, err := d.db.Exec("UPDATE photos SET album = array_append(album, $1), tags = $2 WHERE userid = $3 AND photo = $4", album, pq.Array(tags), userid, photo); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadPhotoToAlbum", err)
 	}
 }
 
-func (d *DB) UploadVideoToAlbum(userid, extension, album string, video []byte, size float64, tags []string) {
+func (d *DB) UploadVideoToAlbum(userid, extension, album string, video, thumbnail []byte, size float64, tags []string) {
 	if _, err := d.db.Exec(
-		"INSERT INTO videos (userid, video, extension, size) (SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT video FROM videos WHERE userid = $1 AND video = $2))", userid, video, extension, size); err != nil {
+		"INSERT INTO videos (userid, video, thumbnail, extension, size) (SELECT $1, $2, $3, $4, $5 WHERE NOT EXISTS (SELECT video FROM videos WHERE userid = $1 AND video = $2))", userid, video, thumbnail, extension, size); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
 	}
-	if _, err := d.db.Exec("UPDATE videos SET album = array_append(album, $1), tags = $2 WHERE userid = $3 AND video = $4", album, tags, userid, video); err != nil {
+	if _, err := d.db.Exec("UPDATE videos SET album = array_append(album, $1), tags = $2 WHERE userid = $3 AND video = $4", album, pq.Array(tags), userid, video); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
 	}
 }
