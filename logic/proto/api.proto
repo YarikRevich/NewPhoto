@@ -153,12 +153,9 @@ message GetPhotosRequest {
 }
 
 message GetPhotosResponse {
-    bytes photo = 1; 
-    bytes thumbnail = 2;
-    string extension = 3;
-    double size = 4;
-    string tags = 5;
-    bool ok = 6;
+    bytes thumbnail = 1;
+    repeated string tags = 2;
+    bool ok = 3;
 }
 
 message GetVideosRequest {
@@ -170,7 +167,8 @@ message GetVideosRequest {
 
 message GetVideosResponse {
     bytes thumbnail = 1;
-    bool ok = 2;
+    repeated string tags = 2;
+    bool ok = 3;
 }
 
 
@@ -275,10 +273,8 @@ message GetPhotosFromAlbumRequest{
 
 message GetPhotosFromAlbumResponse{
     bytes thumbnail = 1;
-    string extension = 2;
-    double size = 3;
-    string album = 4;
-    bool ok = 5;
+    repeated string tags = 2;
+    bool ok = 3;
 }
 
 message GetVideosFromAlbumRequest{
@@ -290,8 +286,8 @@ message GetVideosFromAlbumRequest{
 }
 
 message GetVideosFromAlbumResponse{
-    bytes video = 1; 
-    string extension = 2;
+    bytes thumbnail = 1; 
+    repeated string tags = 2;
     bool ok = 3;
 }
 
@@ -355,7 +351,7 @@ message GetPhotosInAlbumNumResponse {
 message UploadVideoToAlbumRequest{
     string access_token = 1;
     string login_token = 2;
-    bytes video = 3;
+    bytes thumbnail = 3;
     string extension = 4;
     double size = 5;
     string album = 6;

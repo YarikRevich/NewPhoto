@@ -90,6 +90,12 @@ func (r *Redis) IsCached(key, expectedcommand string) (string, bool) {
 	return "nil", false
 }
 
+func (r *Redis) Clean(key string) {
+	if c := r.db.Del(ctx, key); c.Err() != nil {
+		log.Logger.CFatalln("CleanCache", c.Err())
+	}
+}
+
 func New() *Redis {
 	r := new(Redis)
 	r.Connect()

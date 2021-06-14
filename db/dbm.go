@@ -5,23 +5,20 @@ import "database/sql"
 
 //Parses the result from GetAlbums request
 type GetAlbumsModel struct {
-	Album string `db:"album"`
+	Name string `db:"album"`
 	Photo []byte `db:"photo"`
 }
 
 //Parses the result from GetPhotosFromAlbum request
 type GetPhotosFromAlbumModel struct {
-	Userid    string         `db:"userid"`
-	Thumbnail []byte         `db:"thumbnail"`
-	Extension string         `db:"extension"`
-	Size      float64        `db:"size"`
-	Album     sql.NullString `db:"album"`
+	Thumbnail []byte   `db:"thumbnail"`
+	Tags      []string `db:"tags"`
 }
 
 //Parses the result from GetVideosFromAlbum request
 type GetVideosFromAlbumModel struct {
-	Video     []byte `db:"video"`
-	Extension string `db:"extension"`
+	Thumbnail []byte   `db:"thumbnail"`
+	Tags  []string `db:"extension"`
 }
 
 //Parses the result from GetPhotos request
@@ -36,4 +33,5 @@ type GetPhotosModel struct {
 //Parses the result from GetVideos request
 type GetVideosModel struct {
 	Thumbnail []byte `db:"thumbnail"`
+	Tags      []string
 }

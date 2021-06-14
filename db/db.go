@@ -79,7 +79,7 @@ func (d *DB) CreateTables() {
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
-	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid text, video bytea, thumbnail bytea, extension text, size float8, album text[], FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
+	_, err = d.db.Exec("CREATE TABLE IF NOT EXISTS videos (userid text, video bytea, thumbnail bytea, extension text, size float8, album text[], tags text[], FOREIGN KEY(userid) REFERENCES users(userid) ON DELETE CASCADE)")
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("CreateDBs", err)
 	}
@@ -227,8 +227,8 @@ func (d *DB) UploadPhoto(userid string, photo, thumbnail []byte, extension strin
 	d.db.MustExec("INSERT INTO photos (userid, photo, thumbnail, extension, size, tags) VALUES ($1, $2, $3, $4, $5, $6)", userid, photo, thumbnail, extension, size, pq.Array(tags))
 }
 
-func (d *DB) UploadVideo(userid, extension string, video, thumbnail []byte, size float64) {
-	d.db.MustExec("INSERT INTO videos (userid, video, thumbnail, extension, size) VALUES ($1, $2, $3, $4, $5)", userid, video, thumbnail, extension, size)
+func (d *DB) UploadVideo(userid, extension string, video, thumbnail []byte, size float64, tags []string) {
+	d.db.MustExec("INSERT INTO videos (userid, video, thumbnail, extension, size, tags) VALUES ($1, $2, $3, $4, $5, $6)", userid, video, thumbnail, extension, size, pq.Array(tags))
 }
 
 func (d *DB) DeleteAccount(userid string) {
@@ -279,7 +279,7 @@ func (d *DB) SetUserAvatar(userid string, avatar []byte) {
 
 func AlbumInResult(w string, c []GetAlbumsModel) bool {
 	for _, v := range c {
-		if v.Album == w {
+		if v.Name == w {
 			return true
 		}
 	}
@@ -298,7 +298,7 @@ func (d *DB) GetAlbums(userid string) []GetAlbumsModel {
 		if err := d.db.Get(&a, "SELECT album, photo FROM photos WHERE userid = $1 AND $2=ANY(album) ORDER BY photo DESC LIMIT 1", userid, v); err != nil && err != sql.ErrNoRows {
 			log.Logger.UsingErrorLogFile().CFatalln("GetAlbums", err)
 		}
-		a.Album = v
+		a.Name = v
 		r = append(r, a)
 	}
 	return r
@@ -342,23 +342,23 @@ func (d *DB) GetVideosInAlbumNum(userid, name string) int64 {
 	return num
 }
 
-func (d *DB) UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte) {
+func (d *DB) UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte, tags []string) {
 	_, err := d.db.Exec(
 		"INSERT INTO photos (userid, photo, thumbnail, extension, size) (SELECT $1, $2, $3, $4, $5 WHERE NOT EXISTS (SELECT photo FROM photos WHERE userid = $1 AND photo = $2))", userid, photo, thumbnail, extension, size)
 	if err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadPhotoToAlbum", err)
 	}
-	if _, err := d.db.Exec("UPDATE photos SET album = array_append(album, $1) WHERE userid = $2 AND photo = $3", album, userid, photo); err != nil {
+	if _, err := d.db.Exec("UPDATE photos SET album = array_append(album, $1) tags = $2 WHERE userid = $3 AND photo = $4", album, pq.Array(tags), userid, photo); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadPhotoToAlbum", err)
 	}
 }
 
-func (d *DB) UploadVideoToAlbum(userid, extension, album string, video []byte, size float64) {
+func (d *DB) UploadVideoToAlbum(userid, extension, album string, video []byte, size float64, tags []string) {
 	if _, err := d.db.Exec(
 		"INSERT INTO videos (userid, video, extension, size) (SELECT $1, $2, $3, $4 WHERE NOT EXISTS (SELECT video FROM videos WHERE userid = $1 AND video = $2))", userid, video, extension, size); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
 	}
-	if _, err := d.db.Exec("UPDATE videos SET album = array_append(album, $1) WHERE userid = $2 AND video = $3", album, userid, video); err != nil {
+	if _, err := d.db.Exec("UPDATE videos SET album = array_append(album, $1), tags = $2 WHERE userid = $3 AND video = $4", album, tags, userid, video); err != nil {
 		log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
 	}
 }

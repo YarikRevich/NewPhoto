@@ -97,7 +97,7 @@ type Home interface {
 	GetPhotos(userid string, offset, page int64) []GetPhotosModel
 	GetVideos(userid string, offset, page int64) []GetVideosModel
 	UploadPhoto(userid string, photo, thumbnail []byte, extension string, size float64, tags []string)
-	UploadVideo(userid, extension string, video, thumbnail []byte, size float64)
+	UploadVideo(userid, extension string, video, thumbnail []byte, size float64, tags []string)
 }
 
 type Account interface {
@@ -124,10 +124,10 @@ type Album interface {
 	GetVideosFromAlbum(userid, name string, offset, page int64) []GetVideosFromAlbumModel
 
 	//Uploads video to the album due to the given name
-	UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte)
+	UploadPhotoToAlbum(userid, extension, album string, size float64, photo, thumbnail []byte, tags []string)
 
 	//Uploads video to the album due to the given name
-	UploadVideoToAlbum(userid, extension, album string, video []byte, size float64)
+	UploadVideoToAlbum(userid, extension, album string, video []byte, size float64, tags []string)
 
 	//Deletes photo from the album due to the given name
 	DeletePhotoFromAlbum(userid, album string, photo []byte)

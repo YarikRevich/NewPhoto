@@ -18,35 +18,32 @@ func (s *NewPhoto) GetPhotos(r *GetPhotosRequest, stream NewPhotos_GetPhotosServ
 	case <-stream.Context().Done():
 		return nil
 	default:
-		// if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS); cached {
-		// 	definer := caching.NewDefiner()
-		// 	result, err := definer.Define(caching.GET_PHOTOS, cr)
-		// 	if err != nil {
-		// 		log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", err)
-		// 	}
-		// 	converted, ok := result.(*[]caching.GetPhotosModel)
-		// 	if !ok {
-		// 		log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", caching.ErrConverting)
-		// 	}
-		// 	for _, value := range *converted {
-		// 		if err := stream.Send(&GetPhotosResponse{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Tags: value.Tags, Ok: true}); err != nil {
-		// 			continue
-		// 		}
-		// 	}
-		// 	return nil
-		// }
+		if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS); cached {
+			definer := caching.Definer{Model: []caching.GetPhotosModel{}, Data: cr}
+			result := definer.Define()
+			converted, ok := result.([]caching.GetPhotosModel)
+			if !ok {
+				log.Logger.UsingErrorLogFile().CFatalln("GetPhotos", caching.ErrConverting)
+			}
+			for _, value := range converted {
+				if err := stream.Send(&GetPhotosResponse{Thumbnail: value.Thumbnail, Tags: value.Tags, Ok: true}); err != nil {
+					continue
+				}
+			}
+			return nil
+		}
 
 		result := s.DBInstanse.GetPhotos(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetOffset(), r.GetPage())
 
 		var model []caching.GetPhotosModel
 		for _, value := range result {
-			model = append(model, caching.GetPhotosModel{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Tags: value.Tags.String})
-			if err := stream.Send(&GetPhotosResponse{Photo: value.Photo, Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Tags: value.Tags.String, Ok: true}); err != nil {
+			model = append(model, caching.GetPhotosModel{Thumbnail: value.Thumbnail, Tags: []string{}})
+			if err := stream.Send(&GetPhotosResponse{Thumbnail: value.Thumbnail, Tags: []string{}, Ok: true}); err != nil {
 				continue
 			}
 		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS, conf.Configure(model))
+		conf := caching.DataConfigurator{Model: model}
+		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS, string(conf.Configure()))
 		return nil
 	}
 }
@@ -64,23 +61,20 @@ func (s *NewPhoto) GetVideos(r *GetVideosRequest, stream NewPhotos_GetVideosServ
 	case <-stream.Context().Done():
 		return nil
 	default:
-		// if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_VIDEOS); cached {
-		// 	definer := caching.NewDefiner()
-		// 	result, err := definer.Define(caching.GET_VIDEOS, cr)
-		// 	if err != nil {
-		// 		log.Logger.UsingErrorLogFile().CFatalln("GetVideos", err)
-		// 	}
-		// 	converted, ok := result.([]caching.GetVideosModel)
-		// 	if !ok {
-		// 		log.Logger.UsingErrorLogFile().CFatalln("GetVideos", caching.ErrConverting)
-		// 	}
-		// 	for _, value := range converted {
-		// 		if err := stream.Send(&GetVideosResponse{Video: value.Video, Ok: true}); err != nil {
-		// 			continue
-		// 		}
-		// 	}
-		// 	return nil
-		// }
+		if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_VIDEOS); cached {
+			definer := caching.Definer{Model: []caching.GetVideosModel{}, Data: cr}
+			result := definer.Define()
+			converted, ok := result.([]caching.GetVideosModel)
+			if !ok {
+				log.Logger.UsingErrorLogFile().CFatalln("GetVideos", caching.ErrConverting)
+			}
+			for _, value := range converted {
+				if err := stream.Send(&GetVideosResponse{Thumbnail: value.Thumbnail, Tags: value.Tags, Ok: true}); err != nil {
+					continue
+				}
+			}
+			return nil
+		}
 
 		result := s.DBInstanse.GetVideos(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetOffset(), r.GetPage())
 
@@ -91,8 +85,8 @@ func (s *NewPhoto) GetVideos(r *GetVideosRequest, stream NewPhotos_GetVideosServ
 				continue
 			}
 		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_VIDEOS, conf.Configure(model))
+		conf := caching.DataConfigurator{Model: model}
+		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_VIDEOS, string(conf.Configure()))
 
 		return nil
 	}
@@ -126,6 +120,7 @@ func (s *NewPhoto) UploadPhoto(stream NewPhotos_UploadPhotoServer) error {
 			log.Logger.UsingErrorLogFile().CFatalln("UploadPhoto", err)
 		}
 	}
+	caching.RedisInstanse.Clean(caching.GET_PHOTOS)
 	return nil
 }
 
@@ -140,12 +135,13 @@ func (s *NewPhoto) UploadVideo(stream NewPhotos_UploadVideoServer) error {
 			if err != nil {
 				break
 			}
-			s.DBInstanse.UploadVideo(s.DBInstanse.GetUserID(msg.GetAccessToken(), msg.GetLoginToken()), msg.GetExtension(), msg.GetVideo(), msg.GetThumbnail(), msg.GetSize())
+			s.DBInstanse.UploadVideo(s.DBInstanse.GetUserID(msg.GetAccessToken(), msg.GetLoginToken()), msg.GetExtension(), msg.GetVideo(), msg.GetThumbnail(), msg.GetSize(), []string{})
 		}
 		if err := stream.SendAndClose(&UploadVideoResponse{Ok: true}); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("UploadVideo", err)
 		}
 	}
+	caching.RedisInstanse.Clean(caching.GET_VIDEOS)
 	return nil
 }
 
@@ -159,11 +155,8 @@ func (s *NewPhoto) DeleteAccount(ctx context.Context, r *DeleteAccountRequest) (
 func (s *NewPhoto) GetUserinfo(cxt context.Context, r *GetUserinfoRequest) (*GetUserinfoResponse, error) {
 	log.Logger.UsingAccessLogFile().CInfoln("GetUserinfo")
 	if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_USER_INFO); cached {
-		definer := caching.NewDefiner()
-		result, err := definer.Define(caching.GET_USER_INFO, cr)
-		if err != nil {
-			log.Logger.UsingErrorLogFile().CFatalln("GetUserinfo", err)
-		}
+		definer := caching.Definer{Model: caching.GetUserinfoModel{}, Data: cr}
+		result := definer.Define()
 		converted, ok := result.(caching.GetUserinfoModel)
 		if !ok {
 			log.Logger.UsingErrorLogFile().CFatalln("GetUserinfo", caching.ErrConverting)
@@ -174,10 +167,9 @@ func (s *NewPhoto) GetUserinfo(cxt context.Context, r *GetUserinfoRequest) (*Get
 
 	firstname, secondname, storage := s.DBInstanse.GetUserinfo(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()))
 
-	// Adds the newest info to redis ...
 	model := caching.GetUserinfoModel{Firstname: firstname, Secondname: secondname, Storage: storage}
-	conf := caching.NewConfigurator()
-	caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_USER_INFO, conf.Configure(model))
+	conf := caching.DataConfigurator{Model: model}
+	caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_USER_INFO, string(conf.Configure()))
 
 	return &GetUserinfoResponse{Firstname: firstname, Secondname: secondname, Storage: storage, Ok: true}, nil
 }
@@ -203,16 +195,31 @@ func (s *NewPhoto) GetPhotosFromAlbum(r *GetPhotosFromAlbumRequest, stream NewPh
 	case <-stream.Context().Done():
 		return nil
 	default:
+		if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS_FROM_ALBUM); cached {
+			definer := caching.Definer{Model: []caching.GetPhotosFromAlbum{}, Data: cr}
+			result := definer.Define()
+			converted, ok := result.([]caching.GetPhotosFromAlbum)
+			if !ok {
+				log.Logger.UsingErrorLogFile().CFatalln("GetPhotosFromAlbum", caching.ErrConverting)
+			}
+			for _, value := range converted {
+				if err := stream.Send(&GetPhotosFromAlbumResponse{Thumbnail: value.Thumbnail, Tags: value.Tags, Ok: true}); err != nil {
+					continue
+				}
+			}
+			return nil
+		}
+
 		result := s.DBInstanse.GetPhotosFromAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName(), r.GetOffset(), r.GetPage())
 		var model []caching.GetPhotosFromAlbum
 		for _, value := range result {
-			model = append(model, caching.GetPhotosFromAlbum{Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Album: value.Album.String})
-			if err := stream.Send(&GetPhotosFromAlbumResponse{Thumbnail: value.Thumbnail, Extension: value.Extension, Size: value.Size, Album: value.Album.String, Ok: true}); err != nil {
+			model = append(model, caching.GetPhotosFromAlbum{Thumbnail: value.Thumbnail, Tags: value.Tags})
+			if err := stream.Send(&GetPhotosFromAlbumResponse{Thumbnail: value.Thumbnail, Tags: value.Tags, Ok: true}); err != nil {
 				log.Logger.UsingErrorLogFile().CFatalln("GetPhotosFromAlbum", err)
 			}
 		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS_FROM_ALBUM, conf.Configure(model))
+		conf := caching.DataConfigurator{Model: model}
+		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_PHOTOS_FROM_ALBUM, string(conf.Configure()))
 		return nil
 	}
 }
@@ -231,17 +238,32 @@ func (s *NewPhoto) GetVideosFromAlbum(r *GetVideosFromAlbumRequest, stream NewPh
 	case <-stream.Context().Done():
 		return nil
 	default:
+		if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_VIDEOS_FROM_ALBUM); cached {
+			definer := caching.Definer{Model: []caching.GetVideosFromAlbum{}, Data: cr}
+			result := definer.Define()
+			converted, ok := result.([]caching.GetVideosFromAlbum)
+			if !ok {
+				log.Logger.UsingErrorLogFile().CFatalln("GetVideosFromAlbum", caching.ErrConverting)
+			}
+			for _, value := range converted {
+				if err := stream.Send(&GetVideosFromAlbumResponse{Thumbnail: value.Thumbnail, Tags: value.Tags, Ok: true}); err != nil {
+					continue
+				}
+			}
+			return nil
+		}
+
 		result := s.DBInstanse.GetVideosFromAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName(), r.GetOffset(), r.GetPage())
 
 		var model []caching.GetVideosFromAlbum
 		for _, value := range result {
-			model = append(model, caching.GetVideosFromAlbum{Video: value.Video, Extension: value.Extension})
-			if err := stream.Send(&GetVideosFromAlbumResponse{Video: value.Video, Extension: value.Extension, Ok: true}); err != nil {
+			model = append(model, caching.GetVideosFromAlbum{Thumbnail: value.Thumbnail, Tags: value.Tags})
+			if err := stream.Send(&GetVideosFromAlbumResponse{Thumbnail: value.Thumbnail, Tags: value.Tags, Ok: true}); err != nil {
 				continue
 			}
 		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_VIDEOS_FROM_ALBUM, conf.Configure(model))
+		conf := caching.DataConfigurator{Model: model}
+		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_VIDEOS_FROM_ALBUM, string(conf.Configure()))
 
 		return nil
 	}
@@ -266,12 +288,13 @@ func (s *NewPhoto) UploadPhotoToAlbum(stream NewPhotos_UploadPhotoToAlbumServer)
 			if err != nil {
 				break
 			}
-			s.DBInstanse.UploadPhotoToAlbum(s.DBInstanse.GetUserID(recv.GetAccessToken(), recv.GetLoginToken()), recv.GetExtension(), recv.GetAlbum(), recv.GetSize(), recv.GetPhoto(), recv.GetThumbnail())
+			s.DBInstanse.UploadPhotoToAlbum(s.DBInstanse.GetUserID(recv.GetAccessToken(), recv.GetLoginToken()), recv.GetExtension(), recv.GetAlbum(), recv.GetSize(), recv.GetPhoto(), recv.GetThumbnail(), []string{})
 		}
 		if err := stream.SendAndClose(&UploadPhotoToAlbumResponse{Ok: true}); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("UploadPhotoToAlbum", err)
 		}
 	}
+	caching.RedisInstanse.Clean(caching.GET_PHOTOS_FROM_ALBUM)
 	return nil
 }
 
@@ -287,12 +310,13 @@ func (s *NewPhoto) UploadVideoToAlbum(stream NewPhotos_UploadVideoToAlbumServer)
 			if err != nil {
 				break
 			}
-			s.DBInstanse.UploadVideoToAlbum(s.DBInstanse.GetUserID(recv.GetAccessToken(), recv.GetLoginToken()), recv.GetExtension(), recv.GetAlbum(), recv.GetVideo(), recv.GetSize())
+			s.DBInstanse.UploadVideoToAlbum(s.DBInstanse.GetUserID(recv.GetAccessToken(), recv.GetLoginToken()), recv.GetExtension(), recv.GetAlbum(), recv.GetThumbnail(), recv.GetSize(), []string{})
 		}
 		if err := stream.SendAndClose(&UploadVideoToAlbumResponse{Ok: true}); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("UploadVideoToAlbum", err)
 		}
 	}
+	caching.RedisInstanse.Clean(caching.GET_VIDEOS_FROM_ALBUM)
 	return nil
 }
 
@@ -303,18 +327,33 @@ func (s *NewPhoto) GetAlbums(r *GetAlbumsRequest, stream NewPhotos_GetAlbumsServ
 	case <-stream.Context().Done():
 		return nil
 	default:
+		if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_ALBUMS); cached {
+			definer := caching.Definer{Model: []caching.GetAlbumsModel{}, Data: cr}
+			result := definer.Define()
+			converted, ok := result.([]caching.GetAlbumsModel)
+			if !ok {
+				log.Logger.UsingErrorLogFile().CFatalln("GetAlbums", caching.ErrConverting)
+			}
+			for _, value := range converted {
+				if err := stream.Send(&GetAlbumsResponse{Name: value.Name, LatestPhoto: value.LatestPhoto, Ok: true}); err != nil {
+					continue
+				}
+			}
+			return nil
+		}
+
 		result := s.DBInstanse.GetAlbums(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()))
 
 		var model []caching.GetAlbumsModel
 
 		for _, value := range result {
-			model = append(model, caching.GetAlbumsModel{Name: value.Album, LatestPhoto: value.Photo})
-			if err := stream.Send(&GetAlbumsResponse{Name: value.Album, LatestPhoto: value.Photo, Ok: true}); err != nil {
+			model = append(model, caching.GetAlbumsModel{Name: value.Name, LatestPhoto: value.Photo})
+			if err := stream.Send(&GetAlbumsResponse{Name: value.Name, LatestPhoto: value.Photo, Ok: true}); err != nil {
 				continue
 			}
 		}
-		conf := caching.NewConfigurator()
-		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_ALBUMS, conf.Configure(model))
+		conf := caching.DataConfigurator{Model: model}
+		caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_ALBUMS, string(conf.Configure()))
 		return nil
 	}
 }
@@ -336,8 +375,9 @@ func (s *NewPhoto) DeletePhotoFromAlbum(stream NewPhotos_DeletePhotoFromAlbumSer
 		if err := stream.SendAndClose(&DeletePhotoFromAlbumResponse{Ok: true}); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("DeletePhotoFromAlbum", err)
 		}
-		return nil
 	}
+	caching.RedisInstanse.Clean(caching.GET_PHOTOS_FROM_ALBUM)
+	return nil
 }
 
 func (s *NewPhoto) DeleteVideoFromAlbum(stream NewPhotos_DeleteVideoFromAlbumServer) error {
@@ -357,14 +397,16 @@ func (s *NewPhoto) DeleteVideoFromAlbum(stream NewPhotos_DeleteVideoFromAlbumSer
 		if err := stream.SendAndClose(&DeleteVideoFromAlbumResponse{Ok: true}); err != nil {
 			log.Logger.UsingErrorLogFile().CFatalln("DeleteVideoFromAlbum", err)
 		}
-		return nil
 	}
+	caching.RedisInstanse.Clean(caching.GET_VIDEOS_FROM_ALBUM)
+	return nil
 }
 
 func (s *NewPhoto) CreateAlbum(ctx context.Context, r *CreateAlbumRequest) (*CreateAlbumResponse, error) {
 	log.Logger.UsingAccessLogFile().CInfoln("CreateAlbum")
 
 	s.DBInstanse.CreateAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName())
+	caching.RedisInstanse.Clean(caching.GET_ALBUMS)
 	return &CreateAlbumResponse{Ok: true}, nil
 }
 
@@ -372,6 +414,7 @@ func (s *NewPhoto) DeleteAlbum(ctx context.Context, r *DeleteAlbumRequest) (*Del
 	log.Logger.UsingAccessLogFile().CInfoln("DeleteAlbum")
 
 	s.DBInstanse.DeleteAlbum(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetName())
+	caching.RedisInstanse.Clean(caching.GET_ALBUMS)
 	return &DeleteAlbumResponse{Ok: true}, nil
 }
 
@@ -389,25 +432,22 @@ func (s *NewPhoto) Ping(ctx context.Context, r *PingRequest) (*PingResponse, err
 func (s *NewPhoto) GetFullMediaByThumbnail(ctx context.Context, r *GetFullMediaByThumbnailRequest) (*GetFullMediaByThumbnailResponse, error) {
 	log.Logger.UsingAccessLogFile().CInfoln("GetFullMediaByThumbnail")
 
-	// if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_MEDIA_BY_THUMBNAIL); cached {
-	// 	definer := caching.NewDefiner()
-	// 	result, err := definer.Define(caching.GET_FULL_MEDIA_BY_THUMBNAIL, cr)
-	// 	if err != nil {
-	// 		log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", err)
-	// 	}
-	// 	converted, ok := result.(*caching.GetFullMediaByThumbnail)
-	// 	if !ok {
-	// 		log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", caching.ErrConverting)
-	// 	}
+	if cr, cached := caching.RedisInstanse.IsCached(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_MEDIA_BY_THUMBNAIL); cached {
+		definer := caching.Definer{Model: caching.GetFullMediaByThumbnail{}, Data: cr}
+		result := definer.Define()
+		converted, ok := result.(caching.GetFullMediaByThumbnail)
+		if !ok {
+			log.Logger.UsingErrorLogFile().CFatalln("GetFullPhotoByThumbnail", caching.ErrConverting)
+		}
 
-	// 	return &GetFullMediaByThumbnailResponse{Media: converted.Media}, nil
-	// }
+		return &GetFullMediaByThumbnailResponse{Media: converted.Media}, nil
+	}
 
 	media := s.DBInstanse.GetFullMediaByThumbnail(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), r.GetThumbnail(), &db.MediaSize{Width: 100, Height: 100}, db.MediaType(r.GetMediaType().Number()))
 
 	model := caching.GetFullMediaByThumbnail{Media: media}
-	conf := caching.NewConfigurator()
-	caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_MEDIA_BY_THUMBNAIL, conf.Configure(model))
+	conf := caching.DataConfigurator{Model: model}
+	caching.RedisInstanse.Set(s.DBInstanse.GetUserID(r.GetAccessToken(), r.GetLoginToken()), caching.GET_FULL_MEDIA_BY_THUMBNAIL, string(conf.Configure()))
 
 	return &GetFullMediaByThumbnailResponse{Media: media, Ok: true}, nil
 }
